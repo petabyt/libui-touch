@@ -1,6 +1,12 @@
+#ifndef LIBUI_ANDROID
+#define LIBUI_ANDROID
+
 #ifndef LIBUI
 #define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_libui_LibUI_##name
 #endif
+
+// https://android.googlesource.com/platform/frameworks/base/+/2ca2c87/core/res/res/values/public.xml
+#define progressBarStyleHorizontal 0x01010078
 
 static struct UILibAndroidEnv {
 	int pid;
@@ -13,13 +19,16 @@ static struct UILibAndroidEnv {
 	jmethodID layout_m;
 
 	jmethodID set_click_m;
+	jmethodID add_runnable_m;
 	jmethodID set_padding_m;
 	jmethodID get_string_m;
 	jmethodID tab_layout_m;
 	jmethodID add_tab_m;
 	jmethodID label_m;
+	jmethodID set_dimensions_m;
 }uilib;
 
+// Signatures copied from libui
 #define uiAreaSignature 0x41726561
 #define uiBoxSignature 0x426F784C
 #define uiButtonSignature 0x42746F6E
@@ -47,6 +56,8 @@ static struct UILibAndroidEnv {
 struct uiAndroidControl {
 	uiControl c;
 	jobject o;
+	short request_width;
+	short request_height;
 };
 
 struct uiButton {
@@ -69,5 +80,15 @@ struct uiTab {
 	struct uiAndroidControl c;
 };
 
+struct uiProgressBar {
+	struct uiAndroidControl c;
+};
+
+struct uiSeparator {
+	struct uiAndroidControl c;
+};
+
 int uiAndroidInit(JNIEnv *env, jobject context, jobject parent);
 uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent);
+
+#endif
