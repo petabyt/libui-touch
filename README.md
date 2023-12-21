@@ -3,14 +3,15 @@ This is an a basic C API over the classic Android View UI system. It also copies
 API, so this allows libui C code to be run on Android, with no modification (requires a little bit of glue)
 
 Use cases:
-- Use [LibUI Lua bindings](https://github.com/zevv/libuilua) and allow in-app 'mods' to manipulate the UI
+- Use [LibUI Lua bindings](https://github.com/zevv/libuilua) and allow in-app plugins to manipulate the UI
 - Very limited and lightweight alternative to Qt (or React Native)
 
 How to use:
+- Copy the files into your project
 - Submodule?
-- Symlink these files into your Android project
+- Symlink these files into your project
 
-- [x] uiButton, uiLabel
+- [x] uiButton, uiLabel, progress bar
 - [x] Click events
 - [x] uiBox
 - [x] TabView (swipe, tab bar)
@@ -18,6 +19,6 @@ How to use:
 - [ ] Set widget text, visibility, hidden, destroy
 - [ ] Tables
 - [ ] Set action bar buttons (Window close/title?)
-- [ ] Dropdowns, progress bars, entries, ratio, combo box, sliders
+- [ ] Dropdowns, entries, ratio, combo box, sliders
 - [ ] File dialog
-- [ ] Multithreaded support (uiQueue)
+- [x] UI call queue support (uiQueue)

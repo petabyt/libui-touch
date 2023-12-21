@@ -5,16 +5,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
@@ -40,12 +43,9 @@ import com.google.android.material.tabs.TabLayout;
 
 import java.util.ArrayList;
 
-import dev.petabyt.camcontrol.Backend;
-import dev.petabyt.camcontrol.Gallery;
-import dev.petabyt.camcontrol.MainActivity;
-
 public class LibUI {
-    public static Context ctx;
+    public static Context ctx = null;
+    public static ActionBar actionBar = null;
 
     // uiWindow (popup) background drawable style resource
     public static int popupDrawableResource = 0;
@@ -53,15 +53,35 @@ public class LibUI {
     // Background drawable resource for buttons
     public static int buttonBackgroundResource = 0;
 
-    // Common way of telling when activity is done loading (onCreate isn't it)
+    public static Boolean useActionBar = true;
+
+    public static void start(AppCompatActivity act) {
+        ctx = (Context)act;
+        waitUntilActivityLoaded(act);
+    }
+
+    // Common way of telling when activity is done loading
     public static void waitUntilActivityLoaded(Activity activity) {
         ViewTreeObserver viewTreeObserver = activity.getWindow().getDecorView().getViewTreeObserver();
         viewTreeObserver.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
                 activity.getWindow().getDecorView().getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                init();
             }
         });
+    }
+
+    private static void init() {
+        if (useActionBar) {
+            actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
+    }
+
+    public static void setTitle(String title) {
+        actionBar.setTitle(title);
+
     }
 
     public static class MyFragment extends Fragment {
@@ -112,6 +132,50 @@ public class LibUI {
         public void onClick(View v) {
             LibUI.callFunction(ptr, arg1, arg2);
         }
+    }
+
+    public static View form(String name) {
+        LinearLayout layout = new LinearLayout(ctx);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        layout.setPadding(5, 5, 5, 5);
+
+        TextView title = new TextView(ctx);
+        title.setPadding(5, 5, 5, 5);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setText(name);
+        title.setLayoutParams(new LinearLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+        ));
+
+        layout.addView(title);
+
+        return layout;
+    }
+
+    public static void formAppend(View form, String name, View child) {
+        LinearLayout entry = new LinearLayout(ctx);
+        entry.setOrientation(LinearLayout.HORIZONTAL);
+        entry.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        entry.setPadding(5, 5, 5, 5);
+
+        TextView entryName = new TextView(ctx);
+        entryName.setPadding(40, 20, 20, 20);
+        entryName.setText("Foo bar");
+        entryName.setLayoutParams(new LinearLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
+        ));
+        entry.addView(entryName);
+
+        entry.addView(child);
+
+        ((LinearLayout)form).addView(entry);
     }
 
     public static View button(String text) {
@@ -208,6 +272,16 @@ public class LibUI {
         frag.addViewGroup(sv);
     }
 
+    public static boolean handleOptions(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                ((Activity) ctx).finish();
+                return true;
+        }
+
+        return ((Activity)ctx).onOptionsItemSelected(item);
+    }
+
     public static class Popup {
         PopupWindow popupWindow;
         public void dismiss() {
@@ -282,10 +356,6 @@ public class LibUI {
             int width = displayMetrics.widthPixels;
             this.title = title;
 
-            ActionBar actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
-            actionBar.setDisplayHomeAsUpEnabled(true);
-            actionBar.setTitle(title);
-
             this.popupWindow = new PopupWindow(
                     (int)(width / 1.1),
                     (int)(height / 1.4)
@@ -331,9 +401,20 @@ public class LibUI {
         }
     }
 
+    private static void setLayoutParams(View v, int a, int b) {
+        v.setLayoutParams(new LinearLayout.LayoutParams(
+                a, b
+        ));
+    }
+
     private static String getString(String name) {
         Resources res = ctx.getResources();
         return res.getString(res.getIdentifier(name, "string", ctx.getPackageName()));
+    }
+
+    private static int getView(String name) {
+        Resources res = ctx.getResources();
+        return res.getIdentifier(name, "id", ctx.getPackageName());
     }
 
     private static void toast(String text) {

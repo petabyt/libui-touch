@@ -6,26 +6,33 @@
 #endif
 
 // https://android.googlesource.com/platform/frameworks/base/+/2ca2c87/core/res/res/values/public.xml
-#define progressBarStyleHorizontal 0x01010078
+#define ANDROID_progressBarStyleHorizontal 0x01010078
+
+#define ANDROID_LAYOUT_MATCH_PARENT 0xffffffff
+#define ANDROID_LAYOUT_WRAP_CONTENT 0xfffffffe
 
 static struct UILibAndroidEnv {
 	int pid;
 	JNIEnv *env;
 	jobject ctx;
 	jclass class;
-	jmethodID button_m;
-	jmethodID add_view_m;
-	jmethodID toast_m;
-	jmethodID layout_m;
 
-	jmethodID set_click_m;
-	jmethodID add_runnable_m;
-	jmethodID set_padding_m;
-	jmethodID get_string_m;
-	jmethodID tab_layout_m;
-	jmethodID add_tab_m;
+	jmethodID button_m;
+	jmethodID layout_m;
+	jmethodID form_m;
 	jmethodID label_m;
+	jmethodID tab_layout_m;
+
+	jmethodID add_view_m;
+	jmethodID form_add_m;
+	jmethodID toast_m;
+	jmethodID set_click_m;
+	jmethodID add_tab_m;
+	jmethodID add_runnable_m;
+	jmethodID get_string_m;
+	jmethodID set_padding_m;
 	jmethodID set_dimensions_m;
+	jmethodID set_layout_m;
 }uilib;
 
 // Signatures copied from libui
@@ -60,33 +67,18 @@ struct uiAndroidControl {
 	short request_height;
 };
 
-struct uiButton {
-	struct uiAndroidControl c;
-};
+typedef struct uiAndroidControl uiAndroidControl;
 
-struct uiLabel {
-	struct uiAndroidControl c;
-};
-
-struct uiWindow {
-	struct uiAndroidControl c;
-};
-
-struct uiBox {
-	struct uiAndroidControl c;
-};
-
-struct uiTab {
-	struct uiAndroidControl c;
-};
-
-struct uiProgressBar {
-	struct uiAndroidControl c;
-};
-
-struct uiSeparator {
-	struct uiAndroidControl c;
-};
+struct uiButton { struct uiAndroidControl c; };
+struct uiLabel { struct uiAndroidControl c; };
+struct uiWindow { struct uiAndroidControl c; };
+struct uiBox { struct uiAndroidControl c; };
+struct uiTab { struct uiAndroidControl c; };
+struct uiProgressBar { struct uiAndroidControl c; };
+struct uiSeparator { struct uiAndroidControl c; };
+struct uiMultilineEntry { struct uiAndroidControl c; };
+struct uiEntry { struct uiAndroidControl c; };
+struct uiForm { struct uiAndroidControl c; };
 
 int uiAndroidInit(JNIEnv *env, jobject context, jobject parent);
 uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent);
