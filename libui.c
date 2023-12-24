@@ -16,7 +16,24 @@ static jobject get_view_by_name_id(const char *id) {
 	(*env)->CallStaticIntMethod(env, uilib.class, method,
 		(*env)->NewStringUTF(env, id)
 	);
+
 	// TODO: finish
+}
+
+void uiSwitchScreen(uiControl *content, const char *title) {
+	JNIEnv *env = uilib.env;
+	jmethodID method = (*env)->GetStaticMethodID(env, uilib.class, "switchScreen", "(Landroid/view/View;Ljava/lang/String;)V");
+	(*env)->CallStaticVoidMethod(env, uilib.class, method,
+		((struct uiAndroidControl *)content)->o, (*env)->NewStringUTF(env, title)
+	);
+}
+
+static void ctx_set_content_view(jobject view) {
+	JNIEnv *env = uilib.env;
+	jmethodID method = (*env)->GetStaticMethodID(env, (*env)->GetObjectClass(env, uilib.ctx), "setContentView", "(Landroid/view/View;)I");
+	(*env)->CallStaticIntMethod(env, uilib.ctx, method,
+		view
+	);
 }
 
 static void view_set_view_enabled(jobject view, int b) {
@@ -362,11 +379,7 @@ int uiAndroidInit(JNIEnv *env, jobject context, jobject parent) {
 	uilib.layout_m = (*env)->GetStaticMethodID(env, class, "linearLayout", "(I)Landroid/view/ViewGroup;");
 	uilib.tab_layout_m = (*env)->GetStaticMethodID(env, class, "tabLayout", "()Landroid/view/View;");
 
-	//uilib.set_layout_m = (*env)->GetStaticMethodID(env, class, "setLayoutParams", "(Landroid/view/View;II)V");
-	//uilib.set_dimensions_m = (*env)->GetStaticMethodID(env, class, "setDimensions", "(Landroid/view/View;II)V");
-
 	uilib.add_tab_m = (*env)->GetStaticMethodID(env, class, "addTab", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
-	//uilib.add_view_m = (*env)->GetStaticMethodID(env, class, "addView", "(Landroid/view/View;Landroid/view/View;)V");
 	uilib.form_add_m = (*env)->GetStaticMethodID(env, class, "formAppend", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
 	uilib.toast_m = (*env)->GetStaticMethodID(env, class, "toast", "(Ljava/lang/String;)V");
 	uilib.set_click_m = (*env)->GetStaticMethodID(env, class, "setClickListener", "(Landroid/view/View;JJJ)V");
@@ -386,7 +399,10 @@ uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent) {
 
 #define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_libui_LibUI_##name
 
-LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, jlong ptr, jlong arg1, jlong arg2) {
-	void (*ptr_f)(void *, void *) = (void *)ptr;
-	ptr_f((void *)arg1, (void *)arg2);
+LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, uintptr_t ptr, uintptr_t arg1, uintptr_t arg2) {
+
+	// TODO: jlong == long long breaks ptr hack, need to store pointer data in struct -> jbytearray
+	
+	void (*ptr_f)(uintptr_t, uintptr_t) = (void *)ptr;
+	ptr_f((uintptr_t)arg1, (uintptr_t)arg2);
 }

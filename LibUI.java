@@ -6,10 +6,13 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -81,7 +84,6 @@ public class LibUI {
 
     public static void setTitle(String title) {
         actionBar.setTitle(title);
-
     }
 
     public static class MyFragment extends Fragment {
@@ -166,7 +168,7 @@ public class LibUI {
 
         TextView entryName = new TextView(ctx);
         entryName.setPadding(40, 20, 20, 20);
-        entryName.setText("Foo bar");
+        entryName.setText(name);
         entryName.setLayoutParams(new LinearLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT
@@ -272,10 +274,85 @@ public class LibUI {
         frag.addViewGroup(sv);
     }
 
-    public static boolean handleOptions(MenuItem item) {
+    public static class Screen {
+        int displayOptions;
+        int id;
+        String title;
+        View content;
+    };
+
+    static ArrayList<Screen> screens = new ArrayList<Screen>();
+    static Screen origActivity = new Screen();
+
+    public static void switchScreen(View view, String title) {
+        Boolean delay = true;
+
+        if (delay) {
+            try {
+                Thread.sleep(100);
+            } catch (Exception e) {}
+        }
+
+        ActionBar actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
+
+        ScrollView layout = new ScrollView(ctx);
+        layout.addView(view);
+
+        Screen screen = new Screen();
+        screen.id = screens.size();
+        screen.title = title;
+        screen.content = layout;
+
+        if (screens.size() == 0) {
+            origActivity.content = ((ViewGroup)((Activity)ctx).findViewById(android.R.id.content)).getChildAt(0);
+            origActivity.title = (String)actionBar.getTitle();
+            origActivity.displayOptions = actionBar.getDisplayOptions();
+        }
+
+        screens.add(screen);
+
+        ((Activity)ctx).setContentView(layout);
+        actionBar.setDisplayHomeAsUpEnabled(true);
+        actionBar.setTitle(title);
+    }
+
+    private static void screenGoBack() {
+        Screen screen = screens.remove(screens.size() - 1);
+
+        if (screens.size() == 0) {
+            ((Activity)ctx).setContentView(origActivity.content);
+
+            ActionBar actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
+            actionBar.setTitle(origActivity.title);
+            if ((origActivity.displayOptions & ActionBar.DISPLAY_SHOW_HOME) == 1) {
+                actionBar.setDisplayHomeAsUpEnabled(true);
+            } else {
+                actionBar.setDisplayHomeAsUpEnabled(false);
+            }
+        } else {
+            ((Activity)ctx).setContentView(screen.content);
+
+            ActionBar actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setTitle(screen.title);
+        }
+    }
+
+    public static boolean handleBack(boolean allowBack) {
+        if (screens.size() == 0) {
+            if (allowBack) {
+                ((Activity) ctx).finish();
+            }
+        } else {
+            screenGoBack();
+        }
+        return true;
+    }
+
+    public static boolean handleOptions(MenuItem item, boolean allowBack) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                ((Activity) ctx).finish();
+                handleBack(allowBack);
                 return true;
         }
 
@@ -293,13 +370,16 @@ public class LibUI {
         public void setChild(View v) {
             LinearLayout rel = new LinearLayout(ctx);
 
+            actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
+                actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setTitle(title);
+
             LinearLayout bar = new LinearLayout(ctx);
             rel.setPadding(10, 10, 10, 10);
             rel.setOrientation(LinearLayout.HORIZONTAL);
             rel.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT));
-            //bar.setBackgroundColor(Color.BLACK);
 
             Button back = new Button(ctx);
             back.setText("Close");
@@ -312,6 +392,9 @@ public class LibUI {
             back.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (Exception e) {}
                     dismiss();
                 }
             });
@@ -328,10 +411,17 @@ public class LibUI {
             bar.addView(tv);
 
             rel.setOrientation(LinearLayout.VERTICAL);
-            rel.setBackground(ContextCompat.getDrawable(ctx, popupDrawableResource));
+            if (popupDrawableResource != 0) {
+                rel.setBackground(ContextCompat.getDrawable(ctx, popupDrawableResource));
+            }
             rel.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
+
+            TypedValue typedValue = new TypedValue();
+            if (ctx.getTheme().resolveAttribute(android.R.attr.windowBackground, typedValue, true)) {
+                rel.setBackgroundColor(typedValue.data);
+            }
 
             rel.addView(bar);
 
@@ -350,6 +440,10 @@ public class LibUI {
         }
 
         Popup(String title, int options) {
+            try {
+                Thread.sleep(100);
+            } catch (Exception e) {}
+
             DisplayMetrics displayMetrics = new DisplayMetrics();
             ((Activity)ctx).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
             int height = displayMetrics.heightPixels;
@@ -357,8 +451,8 @@ public class LibUI {
             this.title = title;
 
             this.popupWindow = new PopupWindow(
-                    (int)(width / 1.1),
-                    (int)(height / 1.4)
+                    (int)(width / 1.5),
+                    (int)(height / 2.0)
             );
 
             this.popupWindow.setOutsideTouchable(false);
@@ -374,11 +468,6 @@ public class LibUI {
         v.setOnClickListener(new MyOnClickListener(ptr, arg1, arg2));
     }
 
-    private static void addView(View parent, View child) {
-        ViewGroup g = (ViewGroup)parent;
-        g.addView(child);
-    }
-
     private static ViewGroup linearLayout(int orientation) {
         LinearLayout layout = new LinearLayout(ctx);
         layout.setOrientation(orientation);
@@ -390,21 +479,6 @@ public class LibUI {
 
     private static void setPadding(View v, int l, int t, int r, int b) {
         v.setPadding(l, t, r, b);
-    }
-
-    private static void setDimensions(View v, int w, int h) {
-        if (w != 0) {
-            v.getLayoutParams().width = w;
-        }
-        if (h != 0) {
-            v.getLayoutParams().height = h;
-        }
-    }
-
-    private static void setLayoutParams(View v, int a, int b) {
-        v.setLayoutParams(new LinearLayout.LayoutParams(
-                a, b
-        ));
     }
 
     private static String getString(String name) {

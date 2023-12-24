@@ -23,16 +23,12 @@ static struct UILibAndroidEnv {
 	jmethodID label_m;
 	jmethodID tab_layout_m;
 
-	jmethodID add_view_m;
 	jmethodID form_add_m;
 	jmethodID toast_m;
 	jmethodID set_click_m;
 	jmethodID add_tab_m;
 	jmethodID add_runnable_m;
 	jmethodID get_string_m;
-	jmethodID set_padding_m;
-	jmethodID set_dimensions_m;
-	jmethodID set_layout_m;
 }uilib;
 
 // Signatures copied from libui
