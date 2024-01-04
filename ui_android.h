@@ -56,6 +56,8 @@ static struct UILibAndroidEnv {
 #define uiTableSignature 0x5461626C
 #define uiWindowSignature 0x57696E64
 
+#define uiScrollSignature
+
 struct uiAndroidControl {
 	uiControl c;
 	jobject o;
@@ -75,8 +77,14 @@ struct uiSeparator { struct uiAndroidControl c; };
 struct uiMultilineEntry { struct uiAndroidControl c; };
 struct uiEntry { struct uiAndroidControl c; };
 struct uiForm { struct uiAndroidControl c; };
+struct uiScroll { struct uiAndroidControl c; };
 
-int uiAndroidInit(JNIEnv *env, jobject context, jobject parent);
+typedef struct uiScroll uiScroll;
+struct uiScroll *uiNewScroll();
+
+int uiAndroidInit(JNIEnv *env, jobject context);
 uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent);
+
+void uiAndroidSetContent(uiControl *c);
 
 #endif

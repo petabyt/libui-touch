@@ -142,7 +142,6 @@ public class LibUI {
         layout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        layout.setPadding(5, 5, 5, 5);
 
         TextView title = new TextView(ctx);
         title.setPadding(5, 5, 5, 5);
@@ -164,10 +163,9 @@ public class LibUI {
         entry.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        entry.setPadding(5, 5, 5, 5);
 
         TextView entryName = new TextView(ctx);
-        entryName.setPadding(40, 20, 20, 20);
+        entryName.setPadding(20, 10, 20, 10);
         entryName.setText(name);
         entryName.setLayoutParams(new LinearLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT,
@@ -209,9 +207,11 @@ public class LibUI {
     public static View tabLayout() {
         LinearLayout layout = new LinearLayout(ctx);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
+        layout.setLayoutParams(new LinearLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+                1.0f
+        ));
 
         TabLayout tl = new TabLayout(ctx);
         tl.setLayoutParams(new ViewGroup.LayoutParams(
@@ -486,9 +486,10 @@ public class LibUI {
         return res.getString(res.getIdentifier(name, "string", ctx.getPackageName()));
     }
 
-    private static int getView(String name) {
+    private static View getView(String name) {
         Resources res = ctx.getResources();
-        return res.getIdentifier(name, "id", ctx.getPackageName());
+        int id = res.getIdentifier(name, "id", ctx.getPackageName());
+        return ((Activity)ctx).findViewById(id);
     }
 
     private static void toast(String text) {
@@ -506,4 +507,9 @@ public class LibUI {
     }
 
     private static native void callFunction(long ptr, long arg1, long arg2);
+
+    private int dpToPx(int dp) {
+        Resources r = ctx.getResources();
+        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, r.getDisplayMetrics()));
+    }
 }
