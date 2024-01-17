@@ -1,26 +1,22 @@
-# Project tit (aka LibUI-Android)
+# LibUI Framework
 
-This is an Android View backend for [libui-ng](https://github.com/libui-ng/libui-ng). It allows you to create native Android UIs
-using the same C API you use to create cross-platform desktop apps using LibUI.
+This is an Android View backend for [libui-ng](https://github.com/libui-ng/libui-ng). It allows you to create native Android apps
+in C, Rust, or [any other language](https://github.com/libui-ng/libui-ng#user-content-language-bindings).
 
-Since libui-ng has bindings for many different programming languages, this also allows you to create UIs in Rust, Nim, Zig, and many others.
+## Short term goals
+- Implement basic UI layouts without writing hundreds of lines of boilerplate
+- Write apps in dozens of different languages
+- Be able to run the same code on Windows, MacOS, Linux, and Android and get a similar layout
+- Make it easy to drop libuifw in existing projects
 
-Once finished, this project can let you:
-- Implement basic app functionality without writing hundreds of lines of boilerplate
-- Write apps in your favorite compiled language
-- Add modding support to your app, and allow UI to be created and modified on runtime
-- Run the same code on Windows, MacOS, Linux, and Android
+It's a *superset* of the LibUI API, giving you basic widgets as well as most things relevant for mobile app development.
 
-Since the scope of this project is limited, this is not a replacement for React Native. It won't give you low-level
-hardware APIs, and it won't let you fine-tune UI layouts. It will only act as a very basic layer allowing you to create
-basic UI widgets from compiled languages.
-
-## Use cases:
+## Use cases
 - Use [LibUI Lua bindings](https://github.com/zevv/libuilua) and allow in-app plugins to manipulate the UI
 - Very limited and lightweight alternative to Qt (or React Native)
-- Easy to drop in existing projects (one Java file, two C files)
+- Drop libuifw in existing projects to help speed up development
 
-## How to use:
+## How to use
 - Copy the files into your project
 - Submodule?
 - Symlink these files into your project
@@ -31,7 +27,7 @@ basic UI widgets from compiled languages.
 - [x] uiBox
 - [x] uiTab (swipe, tab bar)
 - [x] Access strings.xml text from string ID
-- [x] Create 'activities' on runtime (uiScreenSwitch)
+- [x] Emulate 'activities' on runtime (uiScreenSwitch)
 - [x] UI call queue support (uiQueue)
 - [ ] uiImage
 - [ ] Set widget text, visibility, hidden, destroy
