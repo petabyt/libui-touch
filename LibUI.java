@@ -288,9 +288,7 @@ public class LibUI {
         Boolean delay = true;
 
         if (delay) {
-            try {
-                Thread.sleep(100);
-            } catch (Exception e) {}
+            userSleep();
         }
 
         ActionBar actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
@@ -359,6 +357,13 @@ public class LibUI {
         return ((Activity)ctx).onOptionsItemSelected(item);
     }
 
+    // Being too fast doesn't feel right, brain need delay
+    public static void userSleep() {
+        try {
+            Thread.sleep(100);
+        } catch (Exception e) {}
+    }
+
     public static class Popup {
         PopupWindow popupWindow;
         public void dismiss() {
@@ -371,7 +376,7 @@ public class LibUI {
             LinearLayout rel = new LinearLayout(ctx);
 
             actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
-                actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setTitle(title);
 
             LinearLayout bar = new LinearLayout(ctx);
@@ -392,9 +397,7 @@ public class LibUI {
             back.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (Exception e) {}
+                    userSleep();
                     dismiss();
                 }
             });
@@ -440,10 +443,7 @@ public class LibUI {
         }
 
         Popup(String title, int options) {
-            try {
-                Thread.sleep(100);
-            } catch (Exception e) {}
-
+            userSleep();
             DisplayMetrics displayMetrics = new DisplayMetrics();
             ((Activity)ctx).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
             int height = displayMetrics.heightPixels;
@@ -451,8 +451,8 @@ public class LibUI {
             this.title = title;
 
             this.popupWindow = new PopupWindow(
-                    (int)(width / 1.5),
-                    (int)(height / 2.0)
+                    (int)(width / 1.2),
+                    (int)(height / 1.2)
             );
 
             this.popupWindow.setOutsideTouchable(false);

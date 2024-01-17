@@ -55,6 +55,14 @@ static void view_set_view_enabled(jobject view, int b) {
 	}
 }
 
+void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly) {
+	view_set_view_enabled(((uiAndroidControl *)e)->o, readonly);
+}
+
+char *uiMultilineEntryText(uiMultilineEntry *e) {
+	// GetText returns 'Editable'/CharSequence , toString
+}
+
 static void view_set_visibility(jobject view, int v) {
 	// 0 = visible
 	// 4 = invisible
