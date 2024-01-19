@@ -55,7 +55,7 @@ static struct UILibAndroidEnv {
 #define uiTableSignature 0x5461626C
 #define uiWindowSignature 0x57696E64
 
-#define uiScrollSignature
+#define uiScrollSignature 1234567
 
 struct uiAndroidControl {
 	uiControl c;

@@ -181,6 +181,18 @@ static struct uiAndroidControl *view_new_separator() {
 	return c;
 }
 
+struct uiScroll *uiNewScroll() {
+	struct uiAndroidControl *c = new_view_control(uiBoxSignature);
+
+	JNIEnv *env = uilib.env;
+	jclass class = (*env)->FindClass(env, "android/widget/ScrollView");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	jobject obj = (*env)->NewObject(env, class, constructor, uilib.ctx);
+
+	c->o = obj;
+	return (uiScroll *)c;
+}
+
 uiSeparator *uiNewHorizontalSeparator(void) {
 	return (uiSeparator *)view_new_separator();
 }
