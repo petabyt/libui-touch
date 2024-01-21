@@ -8,7 +8,10 @@
 #include <jni.h>
 
 #include "ui.h"
-#include "ui_android.h"
+#include "uifw.h"
+
+// zeroed in bss
+static struct UILibAndroidEnv libui = {0};
 
 /*
  * uiAndroidThreadStart(JNIEnv *env, jobject ctx);
@@ -25,15 +28,36 @@
  * Create thread from existing thread
  */
 
+static int check_exception() {
+	JNIEnv *env = libui.env;
+	if ((*env)->ExceptionCheck(env)) {
+		(*env)->ExceptionDescribe(env);
+		(*env)->ExceptionClear(env);
+		return -1;
+	}
+
+	return 0;
+}
+
 uiControl *uiControlFromView(jobject obj) {
 	// ...
 	return NULL;
 }
 
+static jobject view_from_ctrl(void *c) {
+	return ((struct uiAndroidControl *)c)->o;
+}
+
+static void view_set_text_size(jobject obj, float size) {
+	JNIEnv *env = libui.env;
+	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, obj), "setTextSize", "(F)V");
+	(*env)->CallVoidMethod(env, obj, method, size);
+}
+
 jobject view_get_by_id(const char *id) {
-	JNIEnv *env = uilib.env;
-	jmethodID method = (*env)->GetMethodID(env, uilib.class, "getView", "(Ljava/lang/String;)Landroid/view/View;");
-	jobject view = (*env)->CallObjectMethod(env, uilib.class, method,
+	JNIEnv *env = libui.env;
+	jmethodID method = (*env)->GetMethodID(env, libui.class, "getView", "(Ljava/lang/String;)Landroid/view/View;");
+	jobject view = (*env)->CallObjectMethod(env, libui.class, method,
 											(*env)->NewStringUTF(env, id)
 	);
 
@@ -41,41 +65,54 @@ jobject view_get_by_id(const char *id) {
 }
 
 void uiSwitchScreen(uiControl *content, const char *title) {
-	JNIEnv *env = uilib.env;
-	jmethodID method = (*env)->GetStaticMethodID(env, uilib.class, "switchScreen", "(Landroid/view/View;Ljava/lang/String;)V");
-	(*env)->CallStaticVoidMethod(env, uilib.class, method,
+	JNIEnv *env = libui.env;
+	jmethodID method = (*env)->GetStaticMethodID(env, libui.class, "switchScreen", "(Landroid/view/View;Ljava/lang/String;)V");
+	(*env)->CallStaticVoidMethod(env, libui.class, method,
 								 ((struct uiAndroidControl *)content)->o, (*env)->NewStringUTF(env, title)
 	);
 }
 
 void ctx_set_content_view(jobject view) {
-	JNIEnv *env = uilib.env;
-	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, uilib.ctx), "setContentView", "(Landroid/view/View;)V");
-	(*env)->CallVoidMethod(env, uilib.ctx, method,
-						   view
-	);
+	JNIEnv *env = libui.env;
+	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, libui.ctx), "setContentView", "(Landroid/view/View;)V");
+	(*env)->CallVoidMethod(env, libui.ctx, method, view );
 }
 
 void uiAndroidSetContent(uiControl *c) {
-	ctx_set_content_view(((uiAndroidControl *)c)->o);
+	ctx_set_content_view(view_from_ctrl(c));
+}
+
+void uiControlCenter(uiControl *c) {
+	JNIEnv *env = libui.env;
+	const jobject view = view_from_ctrl(c);
+	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setGravity", "(I)V");
+	(*env)->CallVoidMethod(env, view, method, 0x00000010);
+}
+
+void uiLabelAlignment(uiControl *c, int align) {
+	JNIEnv *env = libui.env;
+	const jobject view = view_from_ctrl(c);
+	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setTextAlignment", "(I)V");
+	jint alignment = 0;
+	switch (align) {
+	case uiDrawTextAlignCenter:
+		alignment = 0x00000004;
+		break;
+	}
+
+	(*env)->CallVoidMethod(env, view, method, alignment);
 }
 
 void view_set_view_enabled(jobject view, int b) {
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setEnabled", "(Z)V");
 	(*env)->CallVoidMethod(env, view, method, b);
 
-	if ((*env)->ExceptionCheck(env)) {
-		// ???
-		return;
-	}
+	check_exception();
 }
 
 void uiLabelSetTextSize(uiLabel *l, float size) {
-	jobject obj = ((struct uiAndroidControl *)l)->o;
-	JNIEnv *env = uilib.env;
-	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, obj), "setTextSize", "(F)V");
-	(*env)->CallVoidMethod(env, obj, method, size);
+	view_set_text_size(view_from_ctrl(l), size);
 }
 
 void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly) {
@@ -90,20 +127,20 @@ void view_set_visibility(jobject view, int v) {
 	// 0 = visible
 	// 4 = invisible
 	// 8 = gone
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setVisibility", "(I)V");
 	(*env)->CallVoidMethod(env, view, method, v);
 }
-
+ 
 void view_set_dimensions(jobject view, int w, int h) {
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 
 	jmethodID method = (*env)->GetMethodID(env,
 										   (*env)->GetObjectClass(env, view),
 										   "getLayoutParams", "()Landroid/view/ViewGroup$LayoutParams;");
 	jobject obj = (*env)->CallObjectMethod(env, view, method);
 
-	jclass *class = (*env)->GetObjectClass(env, obj);
+	jclass class = (*env)->GetObjectClass(env, obj);
 	jfieldID width_f = (*env)->GetFieldID(env, class, "width", "I");
 	jfieldID height_f = (*env)->GetFieldID(env, class, "height", "I");
 
@@ -115,7 +152,7 @@ void view_set_dimensions(jobject view, int w, int h) {
 }
 
 void view_set_layout(jobject view, int x, int y) {
-	JNIEnv *env = uilib.env;
+	const JNIEnv *env = libui.env;
 
 	jclass class = (*env)->FindClass(env, "android/widget/LinearLayout$LayoutParams");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(II)V");
@@ -128,8 +165,8 @@ void view_set_layout(jobject view, int x, int y) {
 }
 
 static void view_set_padding_px(jobject obj, int padding) {
-	int p = 10 * padding;
-	JNIEnv *env = uilib.env;
+	int p = 10 * padding; // approx dp
+	JNIEnv *env = libui.env;
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, obj), "setPadding", "(IIII)V");
 	(*env)->CallVoidMethod(env, obj, method, p, p, p, p);
 }
@@ -145,15 +182,27 @@ void uiFormSetPadded(uiForm *f, int padded) {
 static inline struct uiAndroidControl *new_view_control(int signature) {
 	struct uiAndroidControl *b = calloc(1, sizeof(struct uiAndroidControl));
 	b->c.Signature = signature;
+	b->c.Handle = (uintptr_t (*)(uiControl *))view_from_ctrl;
 	b->c.Disable = uiControlDisable;
 	b->c.Enable = uiControlEnable;
+
+	// TODO:
+	//	void (*Destroy)(uiControl *);
+	//	uiControl *(*Parent)(uiControl *);
+	//	void (*SetParent)(uiControl *, uiControl *);
+	//	int (*Toplevel)(uiControl *);
+	//	int (*Visible)(uiControl *);
+	//	void (*Show)(uiControl *);
+	//	void (*Hide)(uiControl *);
+	//	int (*Enabled)(uiControl *);
+
 	return b;
 }
 
 static uiBox *new_uibox(int type) {
 	struct uiAndroidControl *b = new_view_control(uiBoxSignature);
-	jobject box = (*uilib.env)->CallStaticObjectMethod(
-			uilib.env, uilib.class, uilib.layout_m,
+	jobject box = (*libui.env)->CallStaticObjectMethod(
+			libui.env, libui.class, libui.layout_m,
 			type
 	);
 	b->o = box;
@@ -161,9 +210,9 @@ static uiBox *new_uibox(int type) {
 	return (uiBox *)b;
 }
 
-void view_set_view_text(jobject view, const char *text) {
-	JNIEnv *env = uilib.env;
-	jstring jtext = (*uilib.env)->NewStringUTF(uilib.env, text);
+static void view_set_text(jobject view, const char *text) {
+	JNIEnv *env = libui.env;
+	jstring jtext = (*libui.env)->NewStringUTF(libui.env, text);
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setText", "(Ljava/lang/CharSequence;)V");
 	(*env)->CallVoidMethod(env, view, method, jtext);
 	(*env)->DeleteLocalRef(env, jtext);
@@ -172,10 +221,10 @@ void view_set_view_text(jobject view, const char *text) {
 static struct uiAndroidControl *view_new_separator() {
 	struct uiAndroidControl *c = new_view_control(uiSeparatorSignature);
 
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "android/widget/Space");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, uilib.ctx);
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
 
 	c->request_height = 50;
 
@@ -186,10 +235,10 @@ static struct uiAndroidControl *view_new_separator() {
 struct uiScroll *uiNewScroll() {
 	struct uiAndroidControl *c = new_view_control(uiBoxSignature);
 
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "android/widget/ScrollView");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, uilib.ctx);
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
 
 	c->o = obj;
 	return (uiScroll *)c;
@@ -214,27 +263,47 @@ void uiControlDisable(uiControl *c) {
 }
 
 uiButton *uiNewButton(const char *text) {
-	jstring jtext = (*uilib.env)->NewStringUTF(uilib.env, text);
+	JNIEnv *env = libui.env;
+
 	struct uiAndroidControl *b = new_view_control(uiButtonSignature);
-	jobject button = (*uilib.env)->CallStaticObjectMethod(
-			uilib.env, uilib.class, uilib.button_m,
-			jtext
-	);
-	b->o = button;
-	(*uilib.env)->DeleteLocalRef(uilib.env, jtext);
+
+	jclass class = (*env)->FindClass(env, "android/widget/Button");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
+	b->o = obj;
+
+	// TODO: condense
+#if 1
+	jfieldID button_bg_f = (*env)->GetStaticFieldID(env, libui.class, "buttonBackgroundResource", "I");
+	jint button_bg = (*env)->GetStaticIntField(env, libui.class, button_bg_f);
+	if (button_bg != 0) {
+		jmethodID get_drawable_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, libui.res), "getDrawable", "(ILandroid/content/res/Resources$Theme;)Landroid/graphics/drawable/Drawable;");
+
+		jobject drawable = (*env)->CallObjectMethod(libui.env, libui.res, get_drawable_m, button_bg, libui.theme);
+
+		jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, obj), "setBackground", "(Landroid/graphics/drawable/Drawable;)V");
+		(*env)->CallVoidMethod(env, obj, method, drawable);
+	}
+#endif
+
+	view_set_text(obj, text);
+	view_set_text_size(obj, 14.0);
+
 	return (uiButton *)b;
 }
 
 uiLabel *uiNewLabel(const char *text) {
-	jstring jtext = (*uilib.env)->NewStringUTF(uilib.env, text);
-	struct uiAndroidControl *l = new_view_control(uiLabelSignature);
-	jobject label = (*uilib.env)->CallStaticObjectMethod(
-			uilib.env, uilib.class, uilib.label_m,
-			jtext
-	);
-	l->o = label;
+	JNIEnv *env = libui.env;
 
-	(*uilib.env)->DeleteLocalRef(uilib.env, jtext);
+	struct uiAndroidControl *l = new_view_control(uiLabelSignature);
+
+	jclass class = (*env)->FindClass(env, "android/widget/TextView");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
+	l->o = obj;
+
+	view_set_text(obj, text);
+	view_set_text_size(obj, 14.0);
 
 	return (uiLabel *)l;
 }
@@ -250,8 +319,8 @@ uiBox *uiNewHorizontalBox() {
 uiTab *uiNewTab() {
 	struct uiAndroidControl *t = new_view_control(uiTabSignature);
 
-	jobject tab = (*uilib.env)->CallStaticObjectMethod(
-			uilib.env, uilib.class, uilib.tab_layout_m
+	jobject tab = (*libui.env)->CallStaticObjectMethod(
+			libui.env, libui.class, libui.tab_layout_m
 	);
 	t->o = tab;
 
@@ -261,10 +330,10 @@ uiTab *uiNewTab() {
 uiMultilineEntry *uiNewMultilineEntry() {
 	struct uiAndroidControl *c = new_view_control(uiMultilineEntrySignature);
 
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "android/widget/EditText");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, uilib.ctx);
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
 
 	c->o = obj;
 	return (uiMultilineEntry *)c;
@@ -273,10 +342,10 @@ uiMultilineEntry *uiNewMultilineEntry() {
 uiEntry *uiNewEntry() {
 	struct uiAndroidControl *c = new_view_control(uiEntrySignature);
 
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "android/widget/EditText");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, uilib.ctx);
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
 
 	view_set_layout(obj, ANDROID_LAYOUT_MATCH_PARENT, ANDROID_LAYOUT_WRAP_CONTENT);
 
@@ -286,10 +355,10 @@ uiEntry *uiNewEntry() {
 
 uiProgressBar *uiNewProgressBar() {
 	struct uiAndroidControl *c = new_view_control(uiProgressBarSignature);
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "android/widget/ProgressBar");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;Landroid/util/AttributeSet;I)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, uilib.ctx, NULL, ANDROID_progressBarStyleHorizontal);
+	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx, NULL, ANDROID_progressBarStyleHorizontal);
 	c->o = obj;
 	return (uiProgressBar *)c;
 }
@@ -297,10 +366,10 @@ uiProgressBar *uiNewProgressBar() {
 uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar) {
 	struct uiAndroidControl *c = new_view_control(uiWindowSignature);
 
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "libui/LibUI$Popup");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Ljava/lang/String;I)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, (*uilib.env)->NewStringUTF(uilib.env, title), 0);
+	jobject obj = (*env)->NewObject(env, class, constructor, (*libui.env)->NewStringUTF(libui.env, title), 0);
 	c->o = obj;
 
 	return (uiWindow *)c;
@@ -309,9 +378,9 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar) 
 uiGroup *uiNewGroup(const char *title) {
 	struct uiAndroidControl *f = new_view_control(uiGroupSignature);
 
-	jobject form = (*uilib.env)->CallStaticObjectMethod(
-			uilib.env, uilib.class, uilib.form_m,
-			(*uilib.env)->NewStringUTF(uilib.env, title)
+	jobject form = (*libui.env)->CallStaticObjectMethod(
+			libui.env, libui.class, libui.form_m,
+			(*libui.env)->NewStringUTF(libui.env, title)
 	);
 	f->o = form;
 
@@ -329,49 +398,46 @@ uiForm *uiNewForm() {
 }
 
 void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy) {
-	(*uilib.env)->CallStaticVoidMethod(
-			uilib.env, uilib.class, uilib.form_add_m,
-			f->c.o, (*uilib.env)->NewStringUTF(uilib.env, label), ((uiAndroidControl *)c)->o
+	(*libui.env)->CallStaticVoidMethod(
+			libui.env, libui.class, libui.form_add_m,
+			f->c.o, (*libui.env)->NewStringUTF(libui.env, label), ((uiAndroidControl *)c)->o
 	);
 }
 
 void uiButtonSetText(uiButton *b, const char *text) {
-	view_set_view_text(b->c.o, text);
+	view_set_text(b->c.o, text);
 }
 
 void uiLabelSetText(uiLabel *l, const char *text) {
-	view_set_view_text(l->c.o, text);
+	view_set_text(l->c.o, text);
 }
 
-
 void uiEntrySetText(uiEntry *e, const char *text) {
-	view_set_view_text(e->c.o, text);
+	view_set_text(e->c.o, text);
 }
 
 void uiWindowSetChild(uiWindow *w, uiControl *child) {
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "libui/LibUI$Popup");
 	jmethodID m_set_child = (*env)->GetMethodID(env, class, "setChild", "(Landroid/view/View;)V");
 	(*env)->CallVoidMethod(env, w->c.o, m_set_child, ((struct uiAndroidControl *)child)->o);
 }
 
 void uiProgressBarSetValue(uiProgressBar *p, int n) {
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, p->c.o), "setProgress", "(I)V");
 	(*env)->CallVoidMethod(env, p->c.o, method, n);
 }
 
 void uiBoxAppend(uiBox *b, uiControl *child, int stretchy) {
 	struct uiAndroidControl *ctl = (struct uiAndroidControl *)child;
-	ctl->o = (*uilib.env)->NewGlobalRef(uilib.env, ctl->o);
+	ctl->o = (*libui.env)->NewGlobalRef(libui.env, ctl->o);
 
-	JNIEnv *env = uilib.env;
+	JNIEnv *env = libui.env;
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID add_view = (*env)->GetMethodID(env, class, "addView", "(Landroid/view/View;)V");
 
-	(*env)->CallVoidMethod(env, b->c.o, add_view,
-						   ((struct uiAndroidControl *)child)->o
-	);
+	(*env)->CallVoidMethod(env, b->c.o, add_view, ((struct uiAndroidControl *)child)->o);
 
 	// Controls can optionally request to be set a certain width (only can be set after appending)
 	if (ctl->request_width) view_set_dimensions(ctl->o, ctl->request_width, 0);
@@ -379,29 +445,29 @@ void uiBoxAppend(uiBox *b, uiControl *child, int stretchy) {
 }
 
 void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData), void *data) {
-	(*uilib.env)->CallStaticVoidMethod(
-			uilib.env, uilib.class, uilib.set_click_m,
+	(*libui.env)->CallStaticVoidMethod(
+			libui.env, libui.class, libui.set_click_m,
 			b->c.o, (uintptr_t)f, (uintptr_t)b, (uintptr_t)data
 	);
 }
 
 void uiQueueMain(void (*f)(void *data), void *data) {
-	(*uilib.env)->CallStaticVoidMethod(
-			uilib.env, uilib.class, uilib.add_runnable_m,
+	(*libui.env)->CallStaticVoidMethod(
+			libui.env, libui.class, libui.add_runnable_m,
 			(uintptr_t)f, data, 0
 	);
 }
 
 void uiTabAppend(uiTab *t, const char *name, uiControl *c) {
-	((uiAndroidControl *)c)->o = (*uilib.env)->NewGlobalRef(uilib.env, ((uiAndroidControl *)c)->o);
+	((uiAndroidControl *)c)->o = (*libui.env)->NewGlobalRef(libui.env, ((uiAndroidControl *)c)->o);
 
-	jstring jname = (*uilib.env)->NewStringUTF(uilib.env, name);
-	(*uilib.env)->CallStaticVoidMethod(
-			uilib.env, uilib.class, uilib.add_tab_m,
+	jstring jname = (*libui.env)->NewStringUTF(libui.env, name);
+	(*libui.env)->CallStaticVoidMethod(
+			libui.env, libui.class, libui.add_tab_m,
 			t->c.o, jname, ((uiAndroidControl *)c)->o
 	);
 
-	(*uilib.env)->DeleteLocalRef(uilib.env, jname);
+	(*libui.env)->DeleteLocalRef(libui.env, jname);
 }
 
 void uiToast(const char *format, ...) {
@@ -409,37 +475,103 @@ void uiToast(const char *format, ...) {
 	va_start(args, format);
 	char buffer[256];
 	vsnprintf(buffer, sizeof(buffer), format, args);
-	jstring jbuffer = (*uilib.env)->NewStringUTF(uilib.env, buffer);
-	(*uilib.env)->CallStaticVoidMethod(
-			uilib.env, uilib.class, uilib.toast_m,
+	jstring jbuffer = (*libui.env)->NewStringUTF(libui.env, buffer);
+	(*libui.env)->CallStaticVoidMethod(
+			libui.env, libui.class, libui.toast_m,
 			jbuffer
 	);
 
-	(*uilib.env)->DeleteLocalRef(uilib.env, jbuffer);
+	(*libui.env)->DeleteLocalRef(libui.env, jbuffer);
 
 	va_end(args);
 }
 
-const char *uiGet(const char *id) {
-	jstring *ret = (*uilib.env)->CallStaticObjectMethod(
-			uilib.env, uilib.class, uilib.get_string_m,
-			(*uilib.env)->NewStringUTF(uilib.env, id)
+static jint get_res_id(const char *key, const char *name) {
+	const JNIEnv *env = libui.env;
+	jobject res = libui.res;
+
+	jmethodID get_identifier = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getIdentifier", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I");
+
+	jint id = (*env)->CallIntMethod(
+			libui.env, res, get_identifier,
+			(*env)->NewStringUTF(env, name), (*env)->NewStringUTF(env, key), libui.package
 	);
 
-	const char *c_string = (*uilib.env)->GetStringUTFChars(uilib.env, ret, 0);
+	return id;
+}
 
-	// TODO: env->ReleaseStringUTFChars(str, utf_string);
+static jobject get_drawable_id(const char *name) {
+	const JNIEnv *env = libui.env;
+	jobject res = libui.res;
+
+	int id = get_res_id("drawable", name);
+	if (id == 0) return NULL;
+
+	jmethodID get_drawable = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getDrawable", "(ILandroid/content/res/Resources$Theme;)Landroid/graphics/drawable/Drawable;");
+
+	jobject drawable = (*env)->CallObjectMethod(
+			libui.env, res, get_drawable, id, libui.theme
+	);
+
+	return drawable;
+}
+
+const char *uiGet(const char *name) {
+	const JNIEnv *env = libui.env;
+	jobject res = libui.res;
+
+	int id = get_res_id("string", name);
+	if (id == 0) return (const char *)"NULL";
+
+	jmethodID get_string = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getString", "(I)Ljava/lang/String;");
+
+	jstring val = (*env)->CallObjectMethod(
+			libui.env, res, get_string, id
+	);
+
+	const char *c_string = (*libui.env)->GetStringUTFChars(libui.env, val, 0);
+
+	// Memory will be leaked
+	// env->ReleaseStringUTFChars(str, utf_string);
 
 	return c_string;
 }
 
+uintptr_t uiControlHandle(uiControl *c) {
+	return (uintptr_t)((uiAndroidControl *)c)->o;
+}
+
+void uiControlSetAttr(uiControl *c, const char *key, const char *value) {
+	JNIEnv *env = libui.env;
+	if (!strcmp(key, "drawable")) {
+		jobject drawable = get_drawable_id(value);
+		if (drawable == NULL) return;
+
+		jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view_from_ctrl(c)), "setBackground", "(Landroid/graphics/drawable/Drawable;)V");
+		(*env)->CallVoidMethod(env, view_from_ctrl(c), method, drawable);
+	}
+}
+
 int uiAndroidInit(JNIEnv *env, jobject context) {
-	uilib.pid = getpid();
-	uilib.env = env;
-	uilib.ctx = context;
+	libui.pid = getpid();
+	libui.env = env;
+	libui.ctx = (*env)->NewGlobalRef(env, context);
+
+	jmethodID get_package_name = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getPackageName", "()Ljava/lang/String;");
+	libui.package = (*env)->CallObjectMethod(env, context, get_package_name);
+
+	jmethodID get_res = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getResources", "()Landroid/content/res/Resources;");
+	libui.res = (*env)->CallObjectMethod(libui.env, libui.ctx, get_res);
+
+	jmethodID get_theme = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getTheme", "()Landroid/content/res/Resources$Theme;");
+	libui.theme = (*env)->CallObjectMethod(libui.env, libui.ctx, get_theme);
+
+	libui.theme = (*env)->NewGlobalRef(env, libui.theme);
+	libui.res = (*env)->NewGlobalRef(env, libui.res);
+	libui.package = (*env)->NewGlobalRef(env, libui.package);
 
 	jclass class = (*env)->FindClass(env, "libui/LibUI");
-	uilib.class = (*env)->NewGlobalRef(env, class);
+	libui.class = (*env)->NewGlobalRef(env, class);
 
 	// TODO: Handle exception
 
@@ -448,19 +580,16 @@ int uiAndroidInit(JNIEnv *env, jobject context) {
 
 	//jfieldID action_bar_f = (*env)->GetStaticFieldID(env, class, "actionBar", "Landroidx/appcompat/app/ActionBar;");
 
-	uilib.button_m = (*env)->GetStaticMethodID(env, class, "button", "(Ljava/lang/String;)Landroid/view/View;");
-	uilib.label_m = (*env)->GetStaticMethodID(env, class, "label", "(Ljava/lang/String;)Landroid/view/View;");
-	uilib.form_m = (*env)->GetStaticMethodID(env, class, "form", "(Ljava/lang/String;)Landroid/view/View;");
-	uilib.layout_m = (*env)->GetStaticMethodID(env, class, "linearLayout", "(I)Landroid/view/ViewGroup;");
-	uilib.tab_layout_m = (*env)->GetStaticMethodID(env, class, "tabLayout", "()Landroid/view/View;");
+	libui.form_m = (*env)->GetStaticMethodID(env, class, "form", "(Ljava/lang/String;)Landroid/view/View;");
+	libui.layout_m = (*env)->GetStaticMethodID(env, class, "linearLayout", "(I)Landroid/view/ViewGroup;");
+	libui.tab_layout_m = (*env)->GetStaticMethodID(env, class, "tabLayout", "()Landroid/view/View;");
 
-	uilib.add_tab_m = (*env)->GetStaticMethodID(env, class, "addTab", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
-	uilib.form_add_m = (*env)->GetStaticMethodID(env, class, "formAppend", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
-	uilib.toast_m = (*env)->GetStaticMethodID(env, class, "toast", "(Ljava/lang/String;)V");
-	uilib.set_click_m = (*env)->GetStaticMethodID(env, class, "setClickListener", "(Landroid/view/View;JJJ)V");
-	uilib.get_string_m = (*env)->GetStaticMethodID(env, class, "getString", "(Ljava/lang/String;)Ljava/lang/String;");
+	libui.add_tab_m = (*env)->GetStaticMethodID(env, class, "addTab", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
+	libui.form_add_m = (*env)->GetStaticMethodID(env, class, "formAppend", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
+	libui.toast_m = (*env)->GetStaticMethodID(env, class, "toast", "(Ljava/lang/String;)V");
+	libui.set_click_m = (*env)->GetStaticMethodID(env, class, "setClickListener", "(Landroid/view/View;JJJ)V");
 
-	uilib.add_runnable_m = (*env)->GetStaticMethodID(env, class, "runRunnable", "(JJJ)V");
+	libui.add_runnable_m = (*env)->GetStaticMethodID(env, class, "runRunnable", "(JJJ)V");
 
 	return 0;
 }

@@ -11,25 +11,25 @@
 #define ANDROID_LAYOUT_MATCH_PARENT 0xffffffff
 #define ANDROID_LAYOUT_WRAP_CONTENT 0xfffffffe
 
-static struct UILibAndroidEnv {
-	int pid;
-	JNIEnv *env;
-	jobject ctx;
-	jclass class;
+struct UILibAndroidEnv {
+    int pid;
+    JNIEnv *env;
+    jobject ctx;
+    jclass class;
+    jstring package;
+    jobject res;
+    jobject theme;
 
-	jmethodID button_m;
-	jmethodID layout_m;
-	jmethodID form_m;
-	jmethodID label_m;
-	jmethodID tab_layout_m;
+    jmethodID layout_m;
+    jmethodID form_m;
+    jmethodID tab_layout_m;
 
-	jmethodID form_add_m;
-	jmethodID toast_m;
-	jmethodID set_click_m;
-	jmethodID add_tab_m;
-	jmethodID add_runnable_m;
-	jmethodID get_string_m;
-}uilib;
+    jmethodID form_add_m;
+    jmethodID toast_m;
+    jmethodID set_click_m;
+    jmethodID add_tab_m;
+    jmethodID add_runnable_m;
+};
 
 #define uiAreaSignature 0x41726561
 #define uiBoxSignature 0x426F784C
@@ -54,8 +54,7 @@ static struct UILibAndroidEnv {
 #define uiTabSignature 0x54616273
 #define uiTableSignature 0x5461626C
 #define uiWindowSignature 0x57696E64
-
-#define uiScrollSignature 1234567
+#define uiScrollSignature 0x1234567
 
 struct uiAndroidControl {
 	uiControl c;
@@ -80,5 +79,13 @@ struct uiScroll { struct uiAndroidControl c; };
 
 typedef struct uiScroll uiScroll;
 struct uiScroll *uiNewScroll();
+
+const char *uiGet(const char *name);
+void uiControlSetAttr(uiControl *c, const char *name, const char *value);
+
+void uiLabelAlignment(uiControl *c, int align);
+int uiAndroidInit(JNIEnv *env, jobject context);
+void uiAndroidSetContent(uiControl *c);
+void uiControlCenter(uiControl *c);
 
 #endif
