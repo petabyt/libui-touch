@@ -4012,4 +4012,6 @@ _UI_EXTERN void uiFreeTableSelection(uiTableSelection* s);
 }
 #endif
 
+#include "uifw.h"
+
 #endif

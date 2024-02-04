@@ -3,12 +3,13 @@ package libui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
-import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -16,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.PopupWindow;
@@ -37,10 +39,11 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.ArrayList;
+import android.graphics.drawable.ColorDrawable;
 
 public class LibUI {
     public static Context ctx = null;
-    static Menu menu = null;
+    public static ActionBar actionBar = null;
 
     // uiWindow (popup) background drawable style resource
     public static int popupDrawableResource = 0;
@@ -48,13 +51,11 @@ public class LibUI {
     // Background drawable resource for buttons
     public static int buttonBackgroundResource = 0;
 
-    public static void init(Activity act) {
-        ctx = (Context)act;
-    }
+    public static Boolean useActionBar = true;
 
     public static void start(Activity act) {
-        init(act);
-        initThiz(ctx);
+        ctx = (Context)act;
+        waitUntilActivityLoaded(act);
     }
 
     // Common way of telling when activity is done loading
@@ -64,8 +65,20 @@ public class LibUI {
             @Override
             public void onGlobalLayout() {
                 activity.getWindow().getDecorView().getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                init();
             }
         });
+    }
+
+    private static void init() {
+        if (useActionBar) {
+            actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
+    }
+
+    public static void setTitle(String title) {
+        actionBar.setTitle(title);
     }
 
     public static class MyFragment extends Fragment {
@@ -160,6 +173,32 @@ public class LibUI {
         ((LinearLayout)form).addView(entry);
     }
 
+    public static View button(String text) {
+        Button b = new Button(ctx);
+
+        if (buttonBackgroundResource != 0) {
+            b.setBackground(ContextCompat.getDrawable(ctx, buttonBackgroundResource));
+        }
+
+        b.setLayoutParams(new LinearLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+                1.0f
+        ));
+
+        b.setTextSize(14f);
+
+        b.setText(text);
+        return (View)b;
+    }
+
+    public static View label(String text) {
+        TextView lbl = new TextView(ctx);
+        lbl.setText(text);
+        lbl.setTextSize(15f);
+        return (View)lbl;
+    }
+
     public static View tabLayout() {
         LinearLayout layout = new LinearLayout(ctx);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -190,10 +229,14 @@ public class LibUI {
             public void onTabSelected(TabLayout.Tab tab) {
                 pager.setCurrentItem(tab.getPosition());
             }
+
             @Override
-            public void onTabUnselected(TabLayout.Tab tab) {}
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
             @Override
-            public void onTabReselected(TabLayout.Tab tab) {}
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
         });
 
         pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -228,6 +271,8 @@ public class LibUI {
 
     public static class Screen {
         int displayOptions;
+        Menu menu;
+        static ArrayList<MenuItem> menuItems = new ArrayList<MenuItem>();
         int id;
         String title;
         View content;
@@ -261,10 +306,9 @@ public class LibUI {
         ((Activity)ctx).setContentView(layout);
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setTitle(title);
-        if (menu != null) {
-            for (int i = 0; i < menu.size(); i++) {
-                menu.getItem(i).setVisible(false);
-            }
+        int menusLength = origActivity.menu.size();
+        for (int i = 0; i < menusLength; i++) {
+            origActivity.menu.removeItem(origActivity.menuItems.get(i).getItemId());
         }
     }
 
@@ -276,15 +320,16 @@ public class LibUI {
 
             ActionBar actionBar = ((AppCompatActivity)ctx).getSupportActionBar();
             actionBar.setTitle(origActivity.title);
-            if ((origActivity.displayOptions & ActionBar.DISPLAY_SHOW_HOME) != 0) {
+            if ((origActivity.displayOptions & ActionBar.DISPLAY_SHOW_HOME) == 1) {
                 actionBar.setDisplayHomeAsUpEnabled(true);
             } else {
                 actionBar.setDisplayHomeAsUpEnabled(false);
             }
-            if (menu != null) {
-                for (int i = 0; i < menu.size(); i++) {
-                    menu.getItem(i).setVisible(true);
-                }
+            for (int i = 0; i < origActivity.menuItems.size(); i++) {
+                MenuItem old = origActivity.menuItems.get(i);
+                MenuItem ne = origActivity.menu.add(old.getGroupId(), old.getItemId(), old.getOrder(), old.getTitle());
+                ne.setIcon(old.getIcon());
+                ne.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
             }
         } else {
             ((Activity)ctx).setContentView(screen.content);
@@ -299,12 +344,11 @@ public class LibUI {
         if (screens.size() == 0) {
             if (allowBack) {
                 ((Activity) ctx).finish();
-                return true;
             }
         } else {
             screenGoBack();
         }
-        return false;
+        return true;
     }
 
     public static boolean handleOptions(MenuItem item, boolean allowBack) {
@@ -318,8 +362,10 @@ public class LibUI {
     }
 
     public static boolean handleMenu(Menu m) {
-        menu = m;
-        Log.d("libui", "menu added");
+        origActivity.menu = m;
+        for (int i = 0; i < m.size(); i++) {
+            origActivity.menuItems.add(m.getItem(i));
+        }
         return true;
     }
 
@@ -342,7 +388,7 @@ public class LibUI {
             LinearLayout rel = new LinearLayout(ctx);
 
             LinearLayout bar = new LinearLayout(ctx);
-            rel.setPadding(30, 10, 10, 10);
+            rel.setPadding(10, 10, 10, 10);
             rel.setOrientation(LinearLayout.HORIZONTAL);
             rel.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -353,7 +399,9 @@ public class LibUI {
             tv.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
+            tv.setPadding(20, 0, 0, 0);
             tv.setTextSize(20f);
+            tv.setGravity(Gravity.CENTER);
             bar.addView(tv);
 
             rel.setOrientation(LinearLayout.VERTICAL);
@@ -364,7 +412,7 @@ public class LibUI {
             rel.addView(bar);
 
             LinearLayout layout = new LinearLayout(ctx);
-            layout.setPadding(0, 20, 20, 20);
+            layout.setPadding(20, 20, 20, 20);
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -446,12 +494,9 @@ public class LibUI {
     }
 
     private static native void callFunction(long ptr, long arg1, long arg2);
-    public static native void initThiz(Context ctx);
-    public static native void startWindow(String symbolName);
-    public static native void startNative(String symbolName);
 
-//    private int dpToPx(int dp) {
-//        Resources r = ctx.getResources();
-//        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, r.getDisplayMetrics()));
-//    }
+    private int dpToPx(int dp) {
+        Resources r = ctx.getResources();
+        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, r.getDisplayMetrics()));
+    }
 }

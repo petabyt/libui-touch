@@ -1,6 +1,8 @@
 #ifndef LIBUI_ANDROID
 #define LIBUI_ANDROID
 
+#include <jni.h>
+
 #ifndef LIBUI
 #define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_libui_LibUI_##name
 #endif
@@ -67,7 +69,7 @@ typedef struct uiAndroidControl uiAndroidControl;
 
 struct uiButton { struct uiAndroidControl c; };
 struct uiLabel { struct uiAndroidControl c; };
-struct uiWindow { struct uiAndroidControl c; };
+struct uiWindow { struct uiAndroidControl c; int is_activity; };
 struct uiBox { struct uiAndroidControl c; };
 struct uiTab { struct uiAndroidControl c; };
 struct uiProgressBar { struct uiAndroidControl c; };
@@ -87,5 +89,17 @@ void uiLabelAlignment(uiControl *c, int align);
 int uiAndroidInit(JNIEnv *env, jobject context);
 void uiAndroidSetContent(uiControl *c);
 void uiControlCenter(uiControl *c);
+
+void uiToast(const char *format, ...);
+void uiSwitchScreen(uiControl *content, const char *title);
+void uiScreenAddIcon(const char *id, const char *title, void (*f)(void *data));
+
+// LibU framework related things, mostly for myself
+int libu_write_file(JNIEnv *env, char *path, void *data, size_t length);
+void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length);
+void *libu_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
+
+void *uiAndroidGetEnv();
+void *uiAndroidGetCtx();
 
 #endif
