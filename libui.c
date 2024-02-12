@@ -167,13 +167,35 @@ void uiBoxSetPadded(uiBox *b, int padded) {
 	view_set_padding_px(b->c.o, padded);
 }
 
-int uiBoxPadded(uiBox *b) {
-	return 0;
-}
+int uiBoxPadded(uiBox *b) { return 0; }
 
 void uiControlShow(uiControl *c) {}
 
-void uiControlDestroy(uiControl *c) {}
+static void view_destroy(jobject v) {
+	JNIEnv *env = libui.env;
+
+	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, v), "getChildCount", "()I");
+	if (!check_exception()) {
+		int child_count = (*env)->CallIntMethod(env, v, method);
+		jmethodID get_child_at_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, v), "getChildAt", "(I)Landroid/view/View;");
+		for (int i = 0; i < child_count; i++) {
+			jobject child = (*env)->CallObjectMethod(env, v, get_child_at_m, i);
+			view_destroy(child);
+		}
+	}
+
+	jobjectRefType type = (*env)->GetObjectRefType(env, v);
+	if (type == JNIWeakGlobalRefType || type == JNIGlobalRefType) {
+		(*env)->DeleteGlobalRef(env, v);
+	} else if (type == JNILocalRefType) {
+		(*env)->DeleteLocalRef(env, v);
+	}
+}
+
+void uiControlDestroy(uiControl *c) {
+	view_destroy(view_from_ctrl((c)));
+	free(c); // not advanced enough to free wrappers
+}
 
 void uiFormSetPadded(uiForm *f, int padded) {
 	view_set_padding_px(f->c.o, padded);
@@ -626,8 +648,6 @@ int uiAndroidInit(JNIEnv *env, jobject context) {
 	jfieldID ctx_f = (*env)->GetStaticFieldID(env, class, "ctx", "Landroid/content/Context;");
 	(*env)->SetStaticObjectField(env, class, ctx_f, context);
 
-	//jfieldID action_bar_f = (*env)->GetStaticFieldID(env, class, "actionBar", "Landroidx/appcompat/app/ActionBar;");
-
 	libui.form_m = (*env)->GetStaticMethodID(env, class, "form", "(Ljava/lang/String;)Landroid/view/View;");
 	libui.layout_m = (*env)->GetStaticMethodID(env, class, "linearLayout", "(I)Landroid/view/ViewGroup;");
 	libui.tab_layout_m = (*env)->GetStaticMethodID(env, class, "tabLayout", "()Landroid/view/View;");
@@ -671,6 +691,7 @@ LIBUI(void, startWindow)(JNIEnv *env, jobject thiz, jstring name) {
 	typedef int _startBox(uiBox *box);
 	_startBox *ptr = dlsym(NULL, utf);
 	if (ptr == NULL) {
+		uiToast("Failed to resolve %s", utf);
 		return;
 	}
 

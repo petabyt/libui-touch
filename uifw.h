@@ -94,12 +94,16 @@ void uiToast(const char *format, ...);
 void uiSwitchScreen(uiControl *content, const char *title);
 void uiScreenAddIcon(const char *id, const char *title, void (*f)(void *data));
 
-// LibU framework related things, mostly for myself
+// Temporary JNI I/O routines
 int libu_write_file(JNIEnv *env, char *path, void *data, size_t length);
 void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length);
 void *libu_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
 
 void *uiAndroidGetEnv();
 void *uiAndroidGetCtx();
+
+#ifdef lua_h
+int luaopen_libuilua(lua_State *L);
+#endif
 
 #endif

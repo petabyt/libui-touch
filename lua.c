@@ -47,13 +47,15 @@ static void create_callback_data(lua_State *L, int n)
 
 	lua_pushstring(L, "foo");
 	lua_pushinteger(L, 123);
+
 	lua_settable(L, -3);
 
 	lua_pushvalue(L, 1);
 	lua_setfield(L, -2, "udata");
+
 	lua_pushvalue(L, 2);
 	lua_setfield(L, -2, "fn");
-	//lua_pushinteger(L, 1234);
+
 	lua_pushvalue(L, 3);
 	lua_setfield(L, -2, "data");
 
@@ -80,15 +82,21 @@ static void callback(lua_State *L, void *control)
 
 	lua_pushstring(L, "udata");
 	lua_gettable(L, -3);
-	//luaL_checktype(L, -1, LUA_TUSERDATA);
 
 	lua_pushstring(L, "data");
 	lua_gettable(L, -4);
-	//luaL_checktype(L, -1, LUA_TUSERDATA);
 
 	/* Call function */
 
-	lua_call(L, 2, 0);
+	if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+		char error_buffer[128];
+		snprintf(error_buffer, sizeof(error_buffer), "%s", lua_tostring(L, -1));
+		uiToast(error_buffer);
+
+		// Ruin the entire script, mark it dead
+		extern int lua_mark_dead(lua_State *L);
+		lua_mark_dead(L);
+	}
 
 	/* Cleanup stack */
 
