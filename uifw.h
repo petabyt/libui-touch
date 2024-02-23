@@ -13,6 +13,9 @@
 #define ANDROID_LAYOUT_MATCH_PARENT 0xffffffff
 #define ANDROID_LAYOUT_WRAP_CONTENT 0xfffffffe
 
+#define ANDROID_simple_spinner_dropdown_item 0x01090009
+#define ANDROID_simple_spinner_item 0x01090008
+
 struct UILibAndroidEnv {
     int pid;
     JNIEnv *env;
@@ -21,6 +24,7 @@ struct UILibAndroidEnv {
     jstring package;
     jobject res;
     jobject theme;
+	jobject inflater;
 
     jmethodID layout_m;
     jmethodID form_m;
@@ -94,11 +98,21 @@ void uiToast(const char *format, ...);
 void uiSwitchScreen(uiControl *content, const char *title);
 void uiScreenAddIcon(const char *id, const char *title, void (*f)(void *data));
 
+// Get child at
+uiControl *uiBoxChild(uiBox *box, int index);
+
+// Get control from native string ID (R.string.*)
+uiControl *uiControlFromID(const char *id);
+
+// Inflate layout from native layout name (R.layout.*)
+uiControl *uiExpandControl(char *name);
+
 // Temporary JNI I/O routines
 int libu_write_file(JNIEnv *env, char *path, void *data, size_t length);
 void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length);
 void *libu_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
 
+// Get JNIEnv of UI thread
 void *uiAndroidGetEnv();
 void *uiAndroidGetCtx();
 

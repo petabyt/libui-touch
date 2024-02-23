@@ -16,6 +16,12 @@ static struct UILibAndroidEnv libui = {0};
 
 #pragma GCC visibility push(internal)
 
+struct CallbackData {
+	uintptr_t fn_ptr;
+	uintptr_t arg1;
+	uintptr_t arg2;
+};
+
 static int check_exception() {
 	JNIEnv *env = libui.env;
 	if ((*env)->ExceptionCheck(env)) {
@@ -46,15 +52,16 @@ static jobject view_from_ctrl(void *c) {
 
 static void view_set_text_size(jobject obj, float size) {
 	JNIEnv *env = libui.env;
-	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, obj), "setTextSize", "(F)V");
+	static jmethodID method = 0; // faster?
+	if (!method) method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, obj), "setTextSize", "(F)V");
 	(*env)->CallVoidMethod(env, obj, method, size);
 }
 
 jobject view_get_by_id(const char *id) {
 	JNIEnv *env = libui.env;
-	jmethodID method = (*env)->GetMethodID(env, libui.class, "getView", "(Ljava/lang/String;)Landroid/view/View;");
-	jobject view = (*env)->CallObjectMethod(env, libui.class, method,
-											(*env)->NewStringUTF(env, id)
+	jmethodID method = (*env)->GetStaticMethodID(env, libui.class, "getView", "(Ljava/lang/String;)Landroid/view/View;");
+	jobject view = (*env)->CallStaticObjectMethod(env, libui.class, method,
+		(*env)->NewStringUTF(env, id)
 	);
 
 	return view;
@@ -221,6 +228,21 @@ static inline struct uiAndroidControl *new_view_control(int signature) {
 	return b;
 }
 
+uiControl *uiControlFromID(const char *id) {
+	JNIEnv *env = libui.env;
+	jobject obj = (*env)->NewGlobalRef(env, view_get_by_id(id));
+
+	int signature = uiLabelSignature;
+	if ((*env)->IsInstanceOf(env, obj, (*env)->FindClass(env, "android/widget/Button"))) {
+		signature = uiButtonSignature;
+	}
+
+	struct uiAndroidControl *ctl = new_view_control(uiButtonSignature);
+	ctl->o = obj;
+
+	return (uiControl *)ctl;
+}
+
 static uiBox *new_uibox(int type) {
 	struct uiAndroidControl *b = new_view_control(uiBoxSignature);
 	jobject box = (*libui.env)->CallStaticObjectMethod(
@@ -281,6 +303,94 @@ static struct uiAndroidControl *view_new_separator() {
 
 	c->o = obj;
 	return c;
+}
+
+static jobject combobox_get_adapter(jobject view) {
+	JNIEnv *env = libui.env;
+	jclass view_c = (*env)->GetObjectClass(env, view);
+	jmethodID get_adapter_m = (*env)->GetMethodID(env, view_c, "getAdapter", "()Landroid/widget/SpinnerAdapter;");
+	jobject adapter = (*env)->CallObjectMethod(env, view, get_adapter_m);
+
+	if (adapter == NULL) {
+		jclass arr_adapter_c = (*env)->FindClass(env, "android/widget/ArrayAdapter");
+		jmethodID init_adapter_m = (*env)->GetMethodID(env, arr_adapter_c, "<init>", "(Landroid/content/Context;I)V");
+		adapter = (*env)->NewObject(env, arr_adapter_c, init_adapter_m, libui.ctx, ANDROID_simple_spinner_item);
+
+		jmethodID set_adapter_m = (*env)->GetMethodID(env, view_c, "setAdapter", "(Landroid/widget/SpinnerAdapter;)V");
+		(*env)->CallVoidMethod(env, view, set_adapter_m, adapter);
+
+		jmethodID set_resource_id_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, adapter), "setDropDownViewResource", "(I)V");
+		(*env)->CallVoidMethod(env, adapter, set_resource_id_m, ANDROID_simple_spinner_dropdown_item);
+	}
+
+	return adapter;
+}
+
+void uiComboboxSetSelected(uiCombobox *c, int index) {
+	JNIEnv *env = libui.env;
+
+	jobject view = view_from_ctrl(c);
+
+	jmethodID add_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setSelection", "(I)V");
+	(*env)->CallVoidMethod(env, view, add_m, (jint)index);
+}
+
+int uiComboboxSelected(uiCombobox *c) {
+	JNIEnv *env = libui.env;
+
+	jobject view = view_from_ctrl(c);
+
+	jmethodID get_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "getSelectedItemPosition", "()I");
+	return (*env)->CallIntMethod(env, view, get_m);
+}
+
+void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *sender, void *senderData), void *data) {
+	JNIEnv *env = libui.env;
+
+	struct CallbackData call_data;
+	call_data.fn_ptr = (uintptr_t)f;
+	call_data.arg1 = (uintptr_t)c;
+	call_data.arg2 = (uintptr_t)data;
+
+	jobject *view = view_from_ctrl(c);
+
+	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
+	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
+
+	jclass listener_c = (*env)->FindClass(env, "libui/LibUI$MySelectListener");
+	jmethodID click_init = (*env)->GetMethodID(env, listener_c, "<init>", "([B)V");
+	jobject listener = (*env)->NewObject(env, listener_c, click_init, arr);
+
+	jmethodID set_click = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setOnItemSelectedListener", "(Landroid/widget/AdapterView$OnItemSelectedListener;)V");
+	(*env)->CallVoidMethod(env, view, set_click, listener);
+}
+
+void uiComboboxClear(uiCombobox *c) {
+	JNIEnv *env = libui.env;
+
+	jobject view = view_from_ctrl(c);
+
+	jobject adapter = combobox_get_adapter(view);
+
+	jclass adapter_c = (*env)->GetObjectClass(env, adapter);
+	jmethodID add_m = (*env)->GetMethodID(env, adapter_c, "clear", "()V");
+	(*env)->CallVoidMethod(env, adapter, add_m);
+}
+
+void uiComboboxAppend(uiCombobox *c, const char *text) {
+	JNIEnv *env = libui.env;
+
+	jobject view = view_from_ctrl(c);
+
+	jstring jtext = (*libui.env)->NewStringUTF(libui.env, text);
+
+	jobject adapter = combobox_get_adapter(view);
+
+	jclass adapter_c = (*env)->GetObjectClass(env, adapter);
+	jmethodID add_m = (*env)->GetMethodID(env, adapter_c, "add", "(Ljava/lang/Object;)V");
+	(*env)->CallVoidMethod(env, adapter, add_m, jtext);
+
+	(*env)->DeleteLocalRef(env, jtext);
 }
 
 struct uiScroll *uiNewScroll() {
@@ -514,11 +624,54 @@ void uiBoxAppend(uiBox *b, uiControl *child, int stretchy) {
 	if (ctl->request_height) view_set_dimensions(ctl->o, 0, ctl->request_height);
 }
 
+uiControl *uiBoxChild(uiBox *box, int index) {
+	JNIEnv *env = libui.env;
+	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
+	jmethodID get_child_m = (*env)->GetMethodID(env, class, "getChildAt", "(I)Landroid/view/View;");
+
+	jobject view = (*env)->CallObjectMethod(env, view_from_ctrl(box), get_child_m, (jint)index);
+
+	struct uiAndroidControl *c = new_view_control(uiBoxSignature);
+	c->o = view;
+	return (uiControl *)c;
+}
+
+void uiBoxDelete(uiBox *box, int index) {
+	JNIEnv *env = libui.env;
+	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
+	jmethodID remove_view_m = (*env)->GetMethodID(env, class, "removeViewAt", "(I)V");
+	(*env)->CallVoidMethod(env, view_from_ctrl(box), remove_view_m, (jint)index);
+}
+
+int uiBoxNumChildren(uiBox *box) {
+	JNIEnv *env = libui.env;
+	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
+	jmethodID get_child_count_m = (*env)->GetMethodID(env, class, "getChildCount", "()I");
+	return (*env)->CallIntMethod(env, view_from_ctrl(box), get_child_count_m);
+}
+
 void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData), void *data) {
-	(*libui.env)->CallStaticVoidMethod(
-			libui.env, libui.class, libui.set_click_m,
-			b->c.o, (uintptr_t)f, (uintptr_t)b, (uintptr_t)data
-	);
+	JNIEnv *env = libui.env;
+
+	// setOnItemSelectedListener
+	// setOnClickListener
+
+	struct CallbackData call_data;
+	call_data.fn_ptr = (uintptr_t)f;
+	call_data.arg1 = (uintptr_t)b;
+	call_data.arg2 = (uintptr_t)data;
+
+	jobject *view = view_from_ctrl(b);
+
+	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
+	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
+
+	jclass listener_c = (*env)->FindClass(env, "libui/LibUI$MyOnClickListener2");
+	jmethodID click_init = (*env)->GetMethodID(env, listener_c, "<init>", "([B)V");
+	jobject listener = (*env)->NewObject(env, listener_c, click_init, arr);
+
+	jmethodID set_click = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setOnClickListener", "(Landroid/view/View$OnClickListener;)V");
+	(*env)->CallVoidMethod(env, view, set_click, listener);
 }
 
 void uiQueueMain(void (*f)(void *data), void *data) {
@@ -586,6 +739,23 @@ static jobject get_drawable_id(const char *name) {
 	return drawable;
 }
 
+uiControl *uiExpandControl(char *name) {
+	JNIEnv *env = libui.env;
+
+	int id = get_res_id("layout", name);
+	if (id == 0) return NULL;
+
+	jmethodID inflate_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, libui.inflater), "inflate", "(ILandroid/view/ViewGroup;)Landroid/view/View;");
+
+	jobject view = (*env)->CallObjectMethod(
+			libui.env, libui.inflater, inflate_m, id, NULL
+	);
+
+	struct uiAndroidControl *c = new_view_control(uiBoxSignature);
+	c->o = view;
+	return (uiControl *)c;
+}
+
 const char *uiGet(const char *name) {
 	JNIEnv *env = libui.env;
 	jobject res = libui.res;
@@ -630,15 +800,19 @@ int uiAndroidInit(JNIEnv *env, jobject context) {
 	jmethodID get_package_name = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getPackageName", "()Ljava/lang/String;");
 	libui.package = (*env)->CallObjectMethod(env, context, get_package_name);
 
+	jmethodID get_inflater = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getLayoutInflater", "()Landroid/view/LayoutInflater;");
+	libui.inflater = (*env)->CallObjectMethod(env, libui.ctx, get_inflater);
+
 	jmethodID get_res = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getResources", "()Landroid/content/res/Resources;");
-	libui.res = (*env)->CallObjectMethod(libui.env, libui.ctx, get_res);
+	libui.res = (*env)->CallObjectMethod(env, libui.ctx, get_res);
 
 	jmethodID get_theme = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getTheme", "()Landroid/content/res/Resources$Theme;");
-	libui.theme = (*env)->CallObjectMethod(libui.env, libui.ctx, get_theme);
+	libui.theme = (*env)->CallObjectMethod(env, libui.ctx, get_theme);
 
 	libui.theme = (*env)->NewGlobalRef(env, libui.theme);
 	libui.res = (*env)->NewGlobalRef(env, libui.res);
 	libui.package = (*env)->NewGlobalRef(env, libui.package);
+	libui.inflater = (*env)->NewGlobalRef(env, libui.inflater);
 
 	jclass class = (*env)->FindClass(env, "libui/LibUI");
 	libui.class = (*env)->NewGlobalRef(env, class);
@@ -681,39 +855,18 @@ LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, uintptr_t ptr, uintptr_t ar
 	ptr_f((uintptr_t)arg1, (uintptr_t)arg2);
 }
 
+LIBUI(void, callFunction2)(JNIEnv *env, jobject thiz, jbyteArray arr) {
+
+	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
+
+	if (data->fn_ptr == NULL) abort();
+
+	// TODO: jlong == long long breaks ptr hack, need to store pointer data in struct -> jbytearray
+
+	void (*ptr_f)(uintptr_t, uintptr_t) = (void *)data->fn_ptr;
+	ptr_f(data->arg1, data->arg2);
+}
+
 LIBUI(void, initThiz)(JNIEnv *env, jobject thiz, jobject ctx) {
 	uiAndroidInit(env, ctx);
-}
-
-LIBUI(void, startWindow)(JNIEnv *env, jobject thiz, jstring name) {
-	const char *utf = (*env)->GetStringUTFChars(env, name, 0);
-
-	typedef int _startBox(uiBox *box);
-	_startBox *ptr = dlsym(NULL, utf);
-	if (ptr == NULL) {
-		uiToast("Failed to resolve %s", utf);
-		return;
-	}
-
-	(*env)->ReleaseStringUTFChars(env, name, utf);
-	(*env)->DeleteLocalRef(env, name);
-
-	struct uiAndroidControl *c = new_view_control(uiWindowSignature);
-	struct uiWindow *win = (uiWindow *)c;
-	win->is_activity = 1;
-	ptr(win);
-}
-
-LIBUI(void, startNative)(JNIEnv *env, jobject thiz, jstring name) {
-	const char *utf = (*env)->GetStringUTFChars(env, name, 0);
-
-	typedef int _startNative();
-	_startNative *ptr = dlsym(NULL, utf);
-	if (ptr == NULL) {
-		return;
-	}
-
-	(*env)->ReleaseStringUTFChars(env, name, utf);
-	(*env)->DeleteLocalRef(env, name);
-	ptr();
 }
