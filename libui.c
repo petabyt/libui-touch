@@ -67,14 +67,6 @@ jobject view_get_by_id(const char *id) {
 	return view;
 }
 
-void uiSwitchScreen(uiControl *content, const char *title) {
-	JNIEnv *env = libui.env;
-	jmethodID method = (*env)->GetStaticMethodID(env, libui.class, "switchScreen", "(Landroid/view/View;Ljava/lang/String;)V");
-	(*env)->CallStaticVoidMethod(env, libui.class, method,
-								 ((struct uiAndroidControl *)content)->o, (*env)->NewStringUTF(env, title)
-	);
-}
-
 void ctx_set_content_view(jobject view) {
 	JNIEnv *env = libui.env;
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, libui.ctx), "setContentView", "(Landroid/view/View;)V");
@@ -675,9 +667,18 @@ void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData
 }
 
 void uiQueueMain(void (*f)(void *data), void *data) {
+	JNIEnv *env = libui.env;
+
+	struct CallbackData call_data;
+	call_data.fn_ptr = (uintptr_t)f;
+	call_data.arg1 = (uintptr_t)data;
+	call_data.arg2 = (uintptr_t)NULL;
+
+	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
+	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
+
 	(*libui.env)->CallStaticVoidMethod(
-			libui.env, libui.class, libui.add_runnable_m,
-			(uintptr_t)f, data, 0
+			libui.env, libui.class, libui.add_runnable_m, arr
 	);
 }
 
@@ -829,9 +830,8 @@ int uiAndroidInit(JNIEnv *env, jobject context) {
 	libui.add_tab_m = (*env)->GetStaticMethodID(env, class, "addTab", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
 	libui.form_add_m = (*env)->GetStaticMethodID(env, class, "formAppend", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
 	libui.toast_m = (*env)->GetStaticMethodID(env, class, "toast", "(Ljava/lang/String;)V");
-	libui.set_click_m = (*env)->GetStaticMethodID(env, class, "setClickListener", "(Landroid/view/View;JJJ)V");
 
-	libui.add_runnable_m = (*env)->GetStaticMethodID(env, class, "runRunnable", "(JJJ)V");
+	libui.add_runnable_m = (*env)->GetStaticMethodID(env, class, "runRunnable", "([B)V");
 
 	return 0;
 }
@@ -847,15 +847,7 @@ uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent) {
 
 #define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_libui_LibUI_##name
 
-LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, uintptr_t ptr, uintptr_t arg1, uintptr_t arg2) {
-
-	// TODO: jlong == long long breaks ptr hack, need to store pointer data in struct -> jbytearray
-
-	void (*ptr_f)(uintptr_t, uintptr_t) = (void *)ptr;
-	ptr_f((uintptr_t)arg1, (uintptr_t)arg2);
-}
-
-LIBUI(void, callFunction2)(JNIEnv *env, jobject thiz, jbyteArray arr) {
+LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, jbyteArray arr) {
 
 	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
 
