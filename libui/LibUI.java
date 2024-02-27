@@ -339,30 +339,6 @@ public class LibUI {
         return popup;
     }
 
-    private static ViewGroup linearLayout(int orientation) {
-        LinearLayout layout = new LinearLayout(ctx);
-        layout.setOrientation(orientation);
-        layout.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        return (ViewGroup)layout;
-    }
-
-    private static String getString(String name) {
-        Resources res = ctx.getResources();
-        return res.getString(res.getIdentifier(name, "string", ctx.getPackageName()));
-    }
-
-    private static View getView(String name) {
-        Resources res = ctx.getResources();
-        int id = res.getIdentifier(name, "id", ctx.getPackageName());
-        return ((Activity)ctx).findViewById(id);
-    }
-
-    private static void toast(String text) {
-        Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show();
-    }
-
     private static void runRunnable(byte[] data) {
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(new Runnable() {

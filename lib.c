@@ -5,24 +5,12 @@
 #include <jni.h>
 #include <android/log.h>
 
-#define LIBU(ret, name) JNIEXPORT ret JNICALL Java_libui_LibU_##name
-
 /* TODO:
 public void getFilePermissions(Activity ctx) {
 	// Require legacy Android write permissions
 	if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 		ActivityCompat.requestPermissions(ctx, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
 	}
-}
-
-public static String getDCIM() {
-	String mainStorage = Environment.getExternalStorageDirectory().getAbsolutePath();
-	return mainStorage + File.separator + "DCIM" + File.separator;
-}
-
-public static String getDocuments() {
-	String mainStorage = Environment.getExternalStorageDirectory().getAbsolutePath();
-	return mainStorage + File.separator + "Documents" + File.separator;
 }
 
 public static JSONObject getJSONSettings(Activity ctx, String key) throws Exception {
@@ -41,38 +29,37 @@ public static void storeJSONSettings(Activity ctx, String key, String value) thr
 */
 
 void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length) {
-	jclass class = (*env)->FindClass(env, "libui/LibU");
-
-#if 0
-	InputStream inputStream = ctx.getAssets().open(file);
-	byte buffer[] = new byte[inputStream.available()];
-	inputStream.read(buffer);
-	inputStream.close();
-	return buffer;
-#endif
-
-	jmethodID method = (*env)->GetStaticMethodID(env, class, "readFileFromAssets", "(Landroid/content/Context;Ljava/lang/String;)[B");
+	jmethodID get_assets_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getAssets", "()Landroid/content/res/AssetManager;");
+	jobject asset_manager = (*env)->CallObjectMethod(env, ctx, get_assets_m);
 
 	jstring jfile = (*env)->NewStringUTF(env, filename);
 
-	jbyteArray array = (*env)->CallStaticObjectMethod(env, class, method,
-													  ctx, jfile
-	);
+	jmethodID open_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, asset_manager), "open", "(Ljava/lang/String;)Ljava/io/InputStream;");
+	jobject input_stream = (*env)->CallObjectMethod(env, asset_manager, open_m, jfile);
 
-	jbyte *bytes = (*env)->GetByteArrayElements(env, array, 0);
+	jmethodID close_m = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/io/InputStream"), "close", "()V");
+	jmethodID read_m = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/io/InputStream"), "read", "([B)I");
+	jmethodID available_m = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/io/InputStream"), "available", "()I");
 
-	(*length) = (*env)->GetArrayLength(env, array);
+	int file_size = (*env)->CallIntMethod(env, input_stream, available_m);
+
+	jbyteArray buffer = (*env)->NewByteArray(env, file_size);
+	(*env)->CallIntMethod(env, input_stream, read_m, buffer);
+	(*env)->CallVoidMethod(env, input_stream, close_m);
+
+	jbyte *bytes = (*env)->GetByteArrayElements(env, buffer, 0);
+	(*length) = file_size;
 
 	void *new = malloc(*length);
 	memcpy(new, bytes, *length);
 
 	(*env)->DeleteLocalRef(env, jfile);
-	(*env)->ReleaseByteArrayElements(env, array, bytes, 0);
+	(*env)->ReleaseByteArrayElements(env, buffer, bytes, 0);
 
 	return new;
 }
 
-void *libu_get_txt_file(JNIEnv *env, jobject ctx, char *filename) {
+void *ui_get_txt_file(JNIEnv *env, jobject ctx, char *filename) {
 	int length = 0;
 	char *bytes = libu_get_assets_file(env, ctx, filename, &length);
 	bytes = realloc(bytes, length + 1);
@@ -94,8 +81,8 @@ const char *ui_get_external_storage_path(JNIEnv *env) {
 	return (*env)->GetStringUTFChars(env, path, 0);
 }
 
-
 // Added in POSIX 2008, not C standard
+__attribute__((weak))
 char *stpcpy(char *dst, const char *src) {
 	const size_t len = strlen(src);
 	return (char *)memcpy (dst, src, len + 1) + len;
