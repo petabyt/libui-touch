@@ -116,12 +116,11 @@ public class LibUI {
         public void onNothingSelected(AdapterView<?> parent) {}
     }
 
-    private static class MyOnClickListener2 implements View.OnClickListener {
+    private static class MyOnClickListener implements View.OnClickListener {
         byte[] struct;
-        public MyOnClickListener2(byte[] struct) {
+        public MyOnClickListener(byte[] struct) {
             this.struct = struct;
         }
-
         @Override
         public void onClick(View v) {
             LibUI.callFunction(struct);

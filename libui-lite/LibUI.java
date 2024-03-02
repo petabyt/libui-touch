@@ -30,7 +30,7 @@ public class LibUI {
     public static ActionBar actionBar = null;
 
     // uiWindow (popup) background drawable style resource
-    private static int popupDrawableResource = 0;
+    public static int popupDrawableResource = 0;
 
     // Background drawable resource for buttons
     public static int buttonBackgroundResource = 0;
