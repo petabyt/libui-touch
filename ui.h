@@ -4008,10 +4008,22 @@ _UI_EXTERN void uiTableSetSelection(uiTable *t, uiTableSelection *sel);
  */
 _UI_EXTERN void uiFreeTableSelection(uiTableSelection* s);
 
+typedef struct uiScroll uiScroll;
+
+_UI_EXTERN uiScroll *uiNewScroll();
+
+_UI_EXTERN void uiScrollSetChild(uiScroll *scroll, uiControl *ctl);
+
 #ifdef __cplusplus
 }
 #endif
 
+#ifdef ANDROID
 #include "uifw.h"
+#endif
+
+#ifdef lua_h
+int luaopen_libuilua(lua_State *L);
+#endif
 
 #endif

@@ -67,13 +67,14 @@ struct uiAndroidControl {
 	jobject o;
 	short request_width;
 	short request_height;
+	char is_activity;
 };
 
 typedef struct uiAndroidControl uiAndroidControl;
 
 struct uiButton { struct uiAndroidControl c; };
 struct uiLabel { struct uiAndroidControl c; };
-struct uiWindow { struct uiAndroidControl c; int is_activity; };
+struct uiWindow { struct uiAndroidControl c; };
 struct uiBox { struct uiAndroidControl c; };
 struct uiTab { struct uiAndroidControl c; };
 struct uiProgressBar { struct uiAndroidControl c; };
@@ -82,9 +83,6 @@ struct uiMultilineEntry { struct uiAndroidControl c; };
 struct uiEntry { struct uiAndroidControl c; };
 struct uiForm { struct uiAndroidControl c; };
 struct uiScroll { struct uiAndroidControl c; };
-
-typedef struct uiScroll uiScroll;
-struct uiScroll *uiNewScroll();
 
 const char *uiGet(const char *name);
 void uiControlSetAttr(uiControl *c, const char *name, const char *value);
@@ -110,7 +108,7 @@ uiControl *uiExpandControl(char *name);
 // Temporary JNI I/O routines
 int libu_write_file(JNIEnv *env, char *path, void *data, size_t length);
 void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length);
-void *libu_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
+void *ui_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
 
 // Get JNIEnv of UI thread
 void *uiAndroidGetEnv();

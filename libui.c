@@ -251,6 +251,19 @@ uiControl *uiControlFromID(const char *id) {
 	return (uiControl *)ctl;
 }
 
+static void set_focusable(jobject obj) {
+	JNIEnv *env = libui.env;
+	jclass class = (*env)->GetObjectClass(env, obj);
+	jmethodID set_clickable_m = (*env)->GetMethodID(env, class, "setClickable", "(Z)V");
+	(*env)->CallVoidMethod(env, obj, set_clickable_m, 1);
+
+	jmethodID focusable_m = (*env)->GetMethodID(env, class, "setFocusableInTouchMode", "(Z)V");
+	(*env)->CallVoidMethod(env, obj, focusable_m, 1);
+
+	jmethodID setFocusable_m = (*env)->GetMethodID(env, class, "setFocusable", "(Z)V");
+	(*env)->CallVoidMethod(env, obj, setFocusable_m, 1);
+}
+
 static uiBox *new_uibox(int type) {
 	JNIEnv *env = libui.env;
 
@@ -264,6 +277,8 @@ static uiBox *new_uibox(int type) {
 	(*env)->CallVoidMethod(env, obj, set_orientation_m, type);
 
 	b->o = obj;
+
+	set_focusable(obj);
 
 	view_set_layout(obj, ANDROID_LAYOUT_MATCH_PARENT, ANDROID_LAYOUT_MATCH_PARENT);
 
@@ -416,6 +431,8 @@ struct uiScroll *uiNewScroll() {
 	jclass class = (*env)->FindClass(env, "android/widget/ScrollView");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
 	jobject obj = (*env)->NewObject(env, class, constructor, libui.ctx);
+
+	set_focusable(obj);
 
 	c->o = obj;
 	return (uiScroll *)c;
@@ -610,7 +627,7 @@ void uiMultilineEntrySetText(uiMultilineEntry *e, const char *text) {
 
 void uiWindowSetChild(uiWindow *w, uiControl *child) {
 	JNIEnv *env = libui.env;
-	if (w->is_activity) {
+	if (((struct uiAndroidControl *)w)->is_activity) {
 		ctx_set_content_view(view_from_ctrl((child)));
 		return;
 	}
