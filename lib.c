@@ -4,31 +4,9 @@
 #include <string.h>
 #include <jni.h>
 #include <android/log.h>
+#include "android.h"
 
-/* TODO:
-public void getFilePermissions(Activity ctx) {
-	// Require legacy Android write permissions
-	if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-		ActivityCompat.requestPermissions(ctx, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-	}
-}
-
-public static JSONObject getJSONSettings(Activity ctx, String key) throws Exception {
-	SharedPreferences prefs = ctx.getSharedPreferences(ctx.getPackageName(), Context.MODE_PRIVATE);
-
-	String value = prefs.getString(ctx.getPackageName() + "." + key, null);
-	if (value == null) return null;
-
-	return new JSONObject(value);
-}
-
-public static void storeJSONSettings(Activity ctx, String key, String value) throws Exception {
-	SharedPreferences prefs = ctx.getSharedPreferences(ctx.getPackageName(), Context.MODE_PRIVATE);
-	prefs.edit().putString(ctx.getPackageName() + "." + key, value).apply();
-}
-*/
-
-void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length) {
+void *jni_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length) {
 	jmethodID get_assets_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getAssets", "()Landroid/content/res/AssetManager;");
 	jobject asset_manager = (*env)->CallObjectMethod(env, ctx, get_assets_m);
 
@@ -59,15 +37,15 @@ void *libu_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length
 	return new;
 }
 
-void *ui_get_txt_file(JNIEnv *env, jobject ctx, char *filename) {
+void *jni_get_txt_file(JNIEnv *env, jobject ctx, char *filename) {
 	int length = 0;
-	char *bytes = libu_get_assets_file(env, ctx, filename, &length);
+	char *bytes = jni_get_assets_file(env, ctx, filename, &length);
 	bytes = realloc(bytes, length + 1);
 	bytes[length] = '\0';
 	return bytes;
 }
 
-const char *ui_get_external_storage_path(JNIEnv *env) {
+const char *jni_get_external_storage_path(JNIEnv *env) {
 	// Get File object for the external storage directory.
 	jclass environment_c = (*env)->FindClass(env, "android/os/Environment");
 	jmethodID method = (*env)->GetStaticMethodID(env, environment_c, "getExternalStorageDirectory", "()Ljava/io/File;");
@@ -79,6 +57,40 @@ const char *ui_get_external_storage_path(JNIEnv *env) {
 	(*env)->DeleteLocalRef(env, file_obj);
 
 	return (*env)->GetStringUTFChars(env, path, 0);
+}
+
+jobject jni_get_pref(JNIEnv *env, jobject ctx, char *key) {
+	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
+	jmethodID get_string_m = (*env)->GetMethodID(env, shared_pref_c, "getString", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
+	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
+
+	jstring package_name_s = jni_get_package_name(env, ctx);
+
+	jobject pref_o = (*env)->CallObjectMethod(env, ctx, get_pref_m, package_name_s, ANDROID_MODE_PRIVATE);
+
+	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
+	jstring value = (*env)->CallObjectMethod(env, pref_o, get_string_m, path, NULL);
+
+	return value;
+}
+
+jobject jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str) {
+	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
+	jclass shared_pref_editor_c = (*env)->FindClass(env, "android/content/SharedPreferences$Editor");
+	jmethodID edit_m = (*env)->GetMethodID(env, shared_pref_c, "edit", "()Landroid/content/SharedPreferences$Editor;");
+	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
+
+	jstring package_name_s = jni_get_package_name(env, ctx);
+
+	jobject pref_o = (*env)->CallObjectMethod(env, ctx, get_pref_m, package_name_s, ANDROID_MODE_PRIVATE);
+
+	jstring editor_o = (*env)->CallObjectMethod(env, pref_o, edit_m);
+	jmethodID put_string_m = (*env)->GetMethodID(env, shared_pref_editor_c, "putString", "(Ljava/lang/String;Ljava/lang/String;)Landroid/content/SharedPreferences$Editor;");
+
+	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
+	jstring value = (*env)->CallObjectMethod(env, editor_o, put_string_m, path, (*env)->NewStringUTF(env, str));
+
+	return value;
 }
 
 // Added in POSIX 2008, not C standard
