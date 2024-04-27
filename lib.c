@@ -7,6 +7,7 @@
 #include "android.h"
 
 void *jni_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length) {
+	(*env)->PushLocalFrame(env, 10);
 	jmethodID get_assets_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getAssets", "()Landroid/content/res/AssetManager;");
 	jobject asset_manager = (*env)->CallObjectMethod(env, ctx, get_assets_m);
 
@@ -34,6 +35,8 @@ void *jni_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length)
 	(*env)->DeleteLocalRef(env, jfile);
 	(*env)->ReleaseByteArrayElements(env, buffer, bytes, 0);
 
+	(*env)->PopLocalFrame(env, NULL);
+
 	return new;
 }
 
@@ -46,6 +49,7 @@ void *jni_get_txt_file(JNIEnv *env, jobject ctx, char *filename) {
 }
 
 const char *jni_get_external_storage_path(JNIEnv *env) {
+	(*env)->PushLocalFrame(env, 10);
 	// Get File object for the external storage directory.
 	jclass environment_c = (*env)->FindClass(env, "android/os/Environment");
 	jmethodID method = (*env)->GetStaticMethodID(env, environment_c, "getExternalStorageDirectory", "()Ljava/io/File;");
@@ -56,10 +60,12 @@ const char *jni_get_external_storage_path(JNIEnv *env) {
 
 	(*env)->DeleteLocalRef(env, file_obj);
 
+	path = (*env)->PopLocalFrame(env, path);
 	return (*env)->GetStringUTFChars(env, path, 0);
 }
 
 jobject jni_get_pref(JNIEnv *env, jobject ctx, char *key) {
+	(*env)->PushLocalFrame(env, 10);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jmethodID get_string_m = (*env)->GetMethodID(env, shared_pref_c, "getString", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
 	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
@@ -71,10 +77,12 @@ jobject jni_get_pref(JNIEnv *env, jobject ctx, char *key) {
 	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
 	jstring value = (*env)->CallObjectMethod(env, pref_o, get_string_m, path, NULL);
 
+	(*env)->PopLocalFrame(env, NULL);
 	return value;
 }
 
 jobject jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str) {
+	(*env)->PushLocalFrame(env, 10);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jclass shared_pref_editor_c = (*env)->FindClass(env, "android/content/SharedPreferences$Editor");
 	jmethodID edit_m = (*env)->GetMethodID(env, shared_pref_c, "edit", "()Landroid/content/SharedPreferences$Editor;");
@@ -90,6 +98,7 @@ jobject jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str) {
 	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
 	jstring value = (*env)->CallObjectMethod(env, editor_o, put_string_m, path, (*env)->NewStringUTF(env, str));
 
+	(*env)->PopLocalFrame(env, NULL);
 	return value;
 }
 

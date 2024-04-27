@@ -52,15 +52,22 @@ static void view_set_text_size(jobject obj, float size) {
 
 static jint get_res_id(const char *key, const char *name) {
 	JNIEnv *env = uiAndroidGetEnv();
+	(*env)->PushLocalFrame(env, 10);
 	jobject res = jni_get_resources(env, uiAndroidGetCtx());
 
 	jmethodID get_identifier = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getIdentifier", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I");
 
+	jstring key_s = (*env)->NewStringUTF(env, name);
+	jstring name_s = (*env)->NewStringUTF(env, key);
+	jstring pkg_s = jni_get_package_name(env, uiAndroidGetCtx());
+
 	jint id = (*env)->CallIntMethod(
 		env, res, get_identifier,
-		(*env)->NewStringUTF(env, name), (*env)->NewStringUTF(env, key),
-		jni_get_package_name(env, uiAndroidGetCtx())
+		key_s, name_s,
+		pkg_s
 	);
+
+	(*env)->PopLocalFrame(env, NULL);
 
 	return id;
 }
@@ -401,6 +408,8 @@ void uiComboboxClear(uiCombobox *c) {
 	jclass adapter_c = (*env)->GetObjectClass(env, adapter);
 	jmethodID add_m = (*env)->GetMethodID(env, adapter_c, "clear", "()V");
 	(*env)->CallVoidMethod(env, adapter, add_m);
+
+	(*env)->DeleteLocalRef(env, adapter);
 }
 
 void uiComboboxAppend(uiCombobox *c, const char *text) {
@@ -417,6 +426,7 @@ void uiComboboxAppend(uiCombobox *c, const char *text) {
 	(*env)->CallVoidMethod(env, adapter, add_m, jtext);
 
 	(*env)->DeleteLocalRef(env, jtext);
+	(*env)->DeleteLocalRef(env, adapter);
 }
 
 struct uiScroll *uiNewScroll() {
@@ -454,6 +464,8 @@ uiButton *uiNewButton(const char *text) {
 
 	struct uiAndroidControl *b = new_view_control(uiButtonSignature);
 
+	(*env)->PushLocalFrame(env, 10);
+
 	jclass class = (*env)->FindClass(env, "android/widget/Button");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
 	jobject obj = (*env)->NewObject(env, class, constructor, uiAndroidGetCtx());
@@ -478,6 +490,11 @@ uiButton *uiNewButton(const char *text) {
 
 	view_set_text(obj, text);
 	view_set_text_size(obj, 14.0);
+
+	//(*env)->DeleteLocalRef(env, res);
+	//(*env)->DeleteLocalRef(env, theme);
+
+	(*env)->PopLocalFrame(env, NULL);
 
 	return (uiButton *)b;
 }
@@ -654,17 +671,27 @@ void uiBoxAppend(uiBox *b, uiControl *child, int stretchy) {
 	// Controls can optionally request to be set a certain width (only can be set after appending)
 	if (ctl->request_width) view_set_dimensions(ctl->o, ctl->request_width, 0);
 	if (ctl->request_height) view_set_dimensions(ctl->o, 0, ctl->request_height);
+	(*env)->DeleteLocalRef(env, class);
 }
 
 uiControl *uiBoxChild(uiBox *box, int index) {
 	JNIEnv *env = uiAndroidGetEnv();
+	//(*env)->PushLocalFrame(env, 10);
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID get_child_m = (*env)->GetMethodID(env, class, "getChildAt", "(I)Landroid/view/View;");
 
 	jobject view = (*env)->CallObjectMethod(env, view_from_ctrl(box), get_child_m, (jint)index);
 
+	jobject viewn = (*env)->NewGlobalRef(env, view);
+	(*env)->DeleteLocalRef(env, view);
+
 	struct uiAndroidControl *c = new_view_control(uiBoxSignature);
-	c->o = view;
+	c->o = viewn;
+
+	//(*env)->PopLocalFrame(env, NULL);
+
+	(*env)->DeleteLocalRef(env, class);
+
 	return (uiControl *)c;
 }
 
@@ -672,6 +699,7 @@ void uiBoxDelete(uiBox *box, int index) {
 	JNIEnv *env = uiAndroidGetEnv();
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID remove_view_m = (*env)->GetMethodID(env, class, "removeViewAt", "(I)V");
+	(*env)->DeleteLocalRef(env, class);
 	(*env)->CallVoidMethod(env, view_from_ctrl(box), remove_view_m, (jint)index);
 }
 
@@ -679,6 +707,7 @@ int uiBoxNumChildren(uiBox *box) {
 	JNIEnv *env = uiAndroidGetEnv();
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID get_child_count_m = (*env)->GetMethodID(env, class, "getChildCount", "()I");
+	(*env)->DeleteLocalRef(env, class);
 	return (*env)->CallIntMethod(env, view_from_ctrl(box), get_child_count_m);
 }
 
@@ -743,6 +772,7 @@ void uiToast(const char *format, ...) {
 	va_end(args);
 
 	JNIEnv *env = uiAndroidGetEnv();
+	(*env)->PushLocalFrame(env, 10);
 
 	jstring jbuffer = (*env)->NewStringUTF(env, buffer);
 
@@ -753,8 +783,7 @@ void uiToast(const char *format, ...) {
 	jobject toast = (*env)->CallStaticObjectMethod(env, toast_c, make_text_m, uiAndroidGetCtx(), jbuffer, 0x0);
 	(*env)->CallVoidMethod(env, toast, show_m);
 
-	(*env)->DeleteLocalRef(env, jbuffer);
-	(*env)->DeleteLocalRef(env, toast);
+	(*env)->PopLocalFrame(env, NULL);
 }
 
 static jobject get_drawable_id(const char *name) {
@@ -770,11 +799,15 @@ static jobject get_drawable_id(const char *name) {
 		env, res, get_drawable, id, jni_get_theme(env, uiAndroidGetCtx())
 	);
 
+	(*env)->DeleteLocalRef(env, res);
+
 	return drawable;
 }
 
 uiControl *uiExpandControl(char *name) {
 	JNIEnv *env = uiAndroidGetEnv();
+
+	(*env)->PushLocalFrame(env, 10);
 
 	int id = get_res_id("layout", name);
 	if (id == 0) return NULL;
@@ -787,6 +820,8 @@ uiControl *uiExpandControl(char *name) {
 			env, inflater, inflate_m, id, NULL
 	);
 
+	view = (*env)->PopLocalFrame(env, view);
+
 	struct uiAndroidControl *c = new_view_control(uiBoxSignature);
 	c->o = view;
 	return (uiControl *)c;
@@ -794,6 +829,7 @@ uiControl *uiExpandControl(char *name) {
 
 const char *uiGet(const char *name) {
 	JNIEnv *env = uiAndroidGetEnv();
+	(*env)->PushLocalFrame(env, 10);
 	jobject res = jni_get_resources(env, uiAndroidGetCtx());
 
 	int id = get_res_id("string", name);
@@ -809,6 +845,8 @@ const char *uiGet(const char *name) {
 
 	// Memory will be leaked
 	// env->ReleaseStringUTFChars(str, utf_string);
+
+	(*env)->PopLocalFrame(env, NULL);
 
 	return c_string;
 }
