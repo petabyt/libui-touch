@@ -24,6 +24,10 @@ struct UILibAndroidEnv libui = {0};
 
 #pragma GCC visibility push(internal)
 
+jobject uiViewFromControl(void *c) {
+	return ((struct uiAndroidControl *)c)->o;
+}
+
 void *uiAndroidGetCtx() {
 	return local.ctx;
 }
@@ -90,19 +94,19 @@ void ctx_set_content_view(jobject view) {
 }
 
 void uiAndroidSetContent(uiControl *c) {
-	ctx_set_content_view(view_from_ctrl(c));
+	ctx_set_content_view(uiViewFromControl(c));
 }
 
 void uiControlCenter(uiControl *c) {
 	JNIEnv *env = uiAndroidGetEnv();
-	const jobject view = view_from_ctrl(c);
+	const jobject view = uiViewFromControl(c);
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setGravity", "(I)V");
 	(*env)->CallVoidMethod(env, view, method, 0x00000010);
 }
 
 void uiLabelAlignment(uiControl *c, int align) {
 	JNIEnv *env = uiAndroidGetEnv();
-	const jobject view = view_from_ctrl(c);
+	const jobject view = uiViewFromControl(c);
 	jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setTextAlignment", "(I)V");
 	jint alignment = 0;
 	switch (align) {
@@ -123,7 +127,7 @@ void view_set_view_enabled(jobject view, int b) {
 }
 
 void uiLabelSetTextSize(uiLabel *l, float size) {
-	view_set_text_size(view_from_ctrl(l), size);
+	view_set_text_size(uiViewFromControl(l), size);
 }
 
 void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly) {
@@ -210,7 +214,7 @@ static void view_destroy(jobject v) {
 }
 
 void uiControlDestroy(uiControl *c) {
-	view_destroy(view_from_ctrl((c)));
+	view_destroy(uiViewFromControl((c)));
 	free(c); // We only will free the parent wrapper :(
 }
 
@@ -221,7 +225,7 @@ void uiFormSetPadded(uiForm *f, int padded) {
 static inline struct uiAndroidControl *new_view_control(int signature) {
 	struct uiAndroidControl *b = calloc(1, sizeof(struct uiAndroidControl));
 	b->c.Signature = signature;
-	b->c.Handle = (uintptr_t (*)(uiControl *))view_from_ctrl;
+	b->c.Handle = (uintptr_t (*)(uiControl *)) uiViewFromControl;
 	b->c.Disable = uiControlDisable;
 	b->c.Enable = uiControlEnable;
 	b->c.Show = uiControlShow;
@@ -308,7 +312,7 @@ static char *view_get_text(jobject view) {
 }
 
 char *uiMultilineEntryText(uiMultilineEntry *e) {
-	return view_get_text(view_from_ctrl(e));
+	return view_get_text(uiViewFromControl(e));
 }
 
 void uiFreeText(char *text) {
@@ -362,7 +366,7 @@ static jobject combobox_get_adapter(jobject view) {
 void uiComboboxSetSelected(uiCombobox *c, int index) {
 	JNIEnv *env = uiAndroidGetEnv();
 
-	jobject view = view_from_ctrl(c);
+	jobject view = uiViewFromControl(c);
 
 	jmethodID add_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setSelection", "(I)V");
 	(*env)->CallVoidMethod(env, view, add_m, (jint)index);
@@ -371,7 +375,7 @@ void uiComboboxSetSelected(uiCombobox *c, int index) {
 int uiComboboxSelected(uiCombobox *c) {
 	JNIEnv *env = uiAndroidGetEnv();
 
-	jobject view = view_from_ctrl(c);
+	jobject view = uiViewFromControl(c);
 
 	jmethodID get_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "getSelectedItemPosition", "()I");
 	return (*env)->CallIntMethod(env, view, get_m);
@@ -385,7 +389,7 @@ void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *sender, void *sen
 	call_data.arg1 = (uintptr_t)c;
 	call_data.arg2 = (uintptr_t)data;
 
-	jobject *view = view_from_ctrl(c);
+	jobject *view = uiViewFromControl(c);
 
 	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
 	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
@@ -401,7 +405,7 @@ void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *sender, void *sen
 void uiComboboxClear(uiCombobox *c) {
 	JNIEnv *env = uiAndroidGetEnv();
 
-	jobject view = view_from_ctrl(c);
+	jobject view = uiViewFromControl(c);
 
 	jobject adapter = combobox_get_adapter(view);
 
@@ -415,7 +419,7 @@ void uiComboboxClear(uiCombobox *c) {
 void uiComboboxAppend(uiCombobox *c, const char *text) {
 	JNIEnv *env = uiAndroidGetEnv();
 
-	jobject view = view_from_ctrl(c);
+	jobject view = uiViewFromControl(c);
 
 	jstring jtext = (*env)->NewStringUTF(env, text);
 
@@ -452,11 +456,11 @@ uiSeparator *uiNewVerticalSeparator(void) {
 }
 
 void uiControlEnable(uiControl *c) {
-	view_set_view_enabled(view_from_ctrl(c), 1);
+	view_set_view_enabled(uiViewFromControl(c), 1);
 }
 
 void uiControlDisable(uiControl *c) {
-	view_set_view_enabled(view_from_ctrl(c), 0);
+	view_set_view_enabled(uiViewFromControl(c), 0);
 }
 
 uiButton *uiNewButton(const char *text) {
@@ -469,7 +473,6 @@ uiButton *uiNewButton(const char *text) {
 	jclass class = (*env)->FindClass(env, "android/widget/Button");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
 	jobject obj = (*env)->NewObject(env, class, constructor, uiAndroidGetCtx());
-	b->o = obj;
 
 	jobject res = jni_get_resources(env, uiAndroidGetCtx());
 	jobject theme = jni_get_theme(env, uiAndroidGetCtx());
@@ -488,13 +491,11 @@ uiButton *uiNewButton(const char *text) {
 	}
 #endif
 
+	obj = (*env)->PopLocalFrame(env, obj);
+	b->o = obj;
+
 	view_set_text(obj, text);
 	view_set_text_size(obj, 14.0);
-
-	//(*env)->DeleteLocalRef(env, res);
-	//(*env)->DeleteLocalRef(env, theme);
-
-	(*env)->PopLocalFrame(env, NULL);
 
 	return (uiButton *)b;
 }
@@ -626,25 +627,25 @@ void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy) {
 }
 
 void uiButtonSetText(uiButton *b, const char *text) {
-	view_set_text(view_from_ctrl(b), text);
+	view_set_text(uiViewFromControl(b), text);
 }
 
 void uiLabelSetText(uiLabel *l, const char *text) {
-	view_set_text(view_from_ctrl(l), text);
+	view_set_text(uiViewFromControl(l), text);
 }
 
 void uiEntrySetText(uiEntry *e, const char *text) {
-	view_set_text(view_from_ctrl(e), text);
+	view_set_text(uiViewFromControl(e), text);
 }
 
 void uiMultilineEntrySetText(uiMultilineEntry *e, const char *text) {
-	view_set_text(view_from_ctrl(e), text);
+	view_set_text(uiViewFromControl(e), text);
 }
 
 void uiWindowSetChild(uiWindow *w, uiControl *child) {
 	JNIEnv *env = uiAndroidGetEnv();
 	if (((struct uiAndroidControl *)w)->is_activity) {
-		ctx_set_content_view(view_from_ctrl((child)));
+		ctx_set_content_view(uiViewFromControl((child)));
 		return;
 	}
 	jclass class = (*env)->FindClass(env, "libui/LibUI$Popup");
@@ -680,7 +681,7 @@ uiControl *uiBoxChild(uiBox *box, int index) {
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID get_child_m = (*env)->GetMethodID(env, class, "getChildAt", "(I)Landroid/view/View;");
 
-	jobject view = (*env)->CallObjectMethod(env, view_from_ctrl(box), get_child_m, (jint)index);
+	jobject view = (*env)->CallObjectMethod(env, uiViewFromControl(box), get_child_m, (jint)index);
 
 	jobject viewn = (*env)->NewGlobalRef(env, view);
 	(*env)->DeleteLocalRef(env, view);
@@ -700,7 +701,7 @@ void uiBoxDelete(uiBox *box, int index) {
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID remove_view_m = (*env)->GetMethodID(env, class, "removeViewAt", "(I)V");
 	(*env)->DeleteLocalRef(env, class);
-	(*env)->CallVoidMethod(env, view_from_ctrl(box), remove_view_m, (jint)index);
+	(*env)->CallVoidMethod(env, uiViewFromControl(box), remove_view_m, (jint)index);
 }
 
 int uiBoxNumChildren(uiBox *box) {
@@ -708,7 +709,7 @@ int uiBoxNumChildren(uiBox *box) {
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID get_child_count_m = (*env)->GetMethodID(env, class, "getChildCount", "()I");
 	(*env)->DeleteLocalRef(env, class);
-	return (*env)->CallIntMethod(env, view_from_ctrl(box), get_child_count_m);
+	return (*env)->CallIntMethod(env, uiViewFromControl(box), get_child_count_m);
 }
 
 void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData), void *data) {
@@ -722,7 +723,7 @@ void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData
 	call_data.arg1 = (uintptr_t)b;
 	call_data.arg2 = (uintptr_t)data;
 
-	jobject *view = view_from_ctrl(b);
+	jobject *view = uiViewFromControl(b);
 
 	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
 	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
@@ -861,8 +862,8 @@ void uiControlSetAttr(uiControl *c, const char *key, const char *value) {
 		jobject drawable = get_drawable_id(value);
 		if (drawable == NULL) return;
 
-		jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view_from_ctrl(c)), "setBackground", "(Landroid/graphics/drawable/Drawable;)V");
-		(*env)->CallVoidMethod(env, view_from_ctrl(c), method, drawable);
+		jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, uiViewFromControl(c)), "setBackground", "(Landroid/graphics/drawable/Drawable;)V");
+		(*env)->CallVoidMethod(env, uiViewFromControl(c), method, drawable);
 	}
 }
 

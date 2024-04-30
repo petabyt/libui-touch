@@ -97,7 +97,7 @@ void *jni_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length)
  * @param filename
  * @return
  */
-void *ui_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
+void *jni_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
 
 #ifdef lua_h
 int luaopen_libuilua(lua_State *L);
@@ -114,5 +114,7 @@ void *uiAndroidGetCtx();
  * @return
  */
 void *uiAndroidGetEnv();
+
+jobject uiViewFromControl(void *c);
 
 #endif
