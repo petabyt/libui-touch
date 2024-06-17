@@ -64,7 +64,7 @@ const char *jni_get_external_storage_path(JNIEnv *env) {
 	return (*env)->GetStringUTFChars(env, path, 0);
 }
 
-jobject jni_get_pref(JNIEnv *env, jobject ctx, char *key) {
+jobject jni_get_pref_str(JNIEnv *env, jobject ctx, char *key) {
 	(*env)->PushLocalFrame(env, 10);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jmethodID get_string_m = (*env)->GetMethodID(env, shared_pref_c, "getString", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
@@ -77,14 +77,29 @@ jobject jni_get_pref(JNIEnv *env, jobject ctx, char *key) {
 	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
 	jstring value = (*env)->CallObjectMethod(env, pref_o, get_string_m, path, NULL);
 
-	(*env)->PopLocalFrame(env, NULL);
+	value = (*env)->PopLocalFrame(env, value);
 	return value;
 }
 
-jobject jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str) {
+jint jni_get_pref_int(JNIEnv *env, jobject ctx, char *key) {
 	(*env)->PushLocalFrame(env, 10);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
-	jclass shared_pref_editor_c = (*env)->FindClass(env, "android/content/SharedPreferences$Editor");
+	jmethodID get_string_m = (*env)->GetMethodID(env, shared_pref_c, "getInt", "(Ljava/lang/String;I)I");
+	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
+
+	jstring package_name_s = jni_get_package_name(env, ctx);
+
+	jobject pref_o = (*env)->CallObjectMethod(env, ctx, get_pref_m, package_name_s, ANDROID_MODE_PRIVATE);
+
+	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
+	jint rc = (*env)->CallIntMethod(env, pref_o, get_string_m, path, -1);
+
+	(*env)->PopLocalFrame(env, NULL);
+	return rc;
+}
+
+jobject jni_get_pref_editor(JNIEnv *env, jobject ctx) {
+	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jmethodID edit_m = (*env)->GetMethodID(env, shared_pref_c, "edit", "()Landroid/content/SharedPreferences$Editor;");
 	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
 
@@ -92,14 +107,48 @@ jobject jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str) {
 
 	jobject pref_o = (*env)->CallObjectMethod(env, ctx, get_pref_m, package_name_s, ANDROID_MODE_PRIVATE);
 
-	jstring editor_o = (*env)->CallObjectMethod(env, pref_o, edit_m);
-	jmethodID put_string_m = (*env)->GetMethodID(env, shared_pref_editor_c, "putString", "(Ljava/lang/String;Ljava/lang/String;)Landroid/content/SharedPreferences$Editor;");
+	return (*env)->CallObjectMethod(env, pref_o, edit_m);
+}
+
+void jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str) {
+	(*env)->PushLocalFrame(env, 10);
+	jstring package_name_s = jni_get_package_name(env, ctx);
+	jobject editor_o = jni_get_pref_editor(env, ctx);
+
+	jmethodID put_string_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, editor_o), "putString", "(Ljava/lang/String;Ljava/lang/String;)Landroid/content/SharedPreferences$Editor;");
+	jmethodID apply_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, editor_o), "apply", "()V");
 
 	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
-	jstring value = (*env)->CallObjectMethod(env, editor_o, put_string_m, path, (*env)->NewStringUTF(env, str));
+	(*env)->CallObjectMethod(env, editor_o, put_string_m, path, (*env)->NewStringUTF(env, str));
+	(*env)->CallVoidMethod(env, editor_o, apply_m);
 
 	(*env)->PopLocalFrame(env, NULL);
-	return value;
+}
+
+void jni_set_pref_int(JNIEnv *env, jobject ctx, char *key, int x) {
+	(*env)->PushLocalFrame(env, 10);
+	jstring package_name_s = jni_get_package_name(env, ctx);
+	jobject editor_o = jni_get_pref_editor(env, ctx);
+
+	jmethodID put_string_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, editor_o), "putInt", "(Ljava/lang/String;I)Landroid/content/SharedPreferences$Editor;");
+	jmethodID apply_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, editor_o), "apply", "()V");
+
+	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
+	(*env)->CallObjectMethod(env, editor_o, put_string_m, path, x);
+	(*env)->CallVoidMethod(env, editor_o, apply_m);
+
+	(*env)->PopLocalFrame(env, NULL);
+}
+
+jobject jni_get_application_ctx(JNIEnv *env)
+{
+	jclass activity_thread = (*env)->FindClass(env,"android/app/ActivityThread");
+	jmethodID current_activity_thread = (*env)->GetStaticMethodID(env, activity_thread, "currentActivityThread", "()Landroid/app/ActivityThread;");
+	jobject activity_thread_obj = (*env)->CallStaticObjectMethod(env, activity_thread, current_activity_thread);
+
+	jmethodID get_application = (*env)->GetMethodID(env, activity_thread, "getApplication", "()Landroid/app/Application;");
+	jobject context = (*env)->CallObjectMethod(env, activity_thread_obj, get_application);
+	return context;
 }
 
 // Added in POSIX 2008, not C standard

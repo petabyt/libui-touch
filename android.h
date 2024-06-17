@@ -62,6 +62,8 @@ static inline jstring jni_concat_strings3(JNIEnv *env, jstring a, jstring b, jst
 	strcat(result, b_ascii);
 	strcat(result, c_ascii);
 
+	void plat_dbg(char *fmt, ...);
+
 	jstring result_s = (*env)->NewStringUTF(env, result);
 
 	(*env)->ReleaseStringUTFChars(env, a, a_ascii);
@@ -73,7 +75,9 @@ static inline jstring jni_concat_strings3(JNIEnv *env, jstring a, jstring b, jst
 	return result_s;
 }
 
-jobject jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str);
-jobject jni_get_pref(JNIEnv *env, jobject ctx, char *key);
+jobject jni_get_pref_str(JNIEnv *env, jobject ctx, char *key);
+jint jni_get_pref_int(JNIEnv *env, jobject ctx, char *key);
+void jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str);
+void jni_set_pref_int(JNIEnv *env, jobject ctx, char *key, int x);
 
 #endif
