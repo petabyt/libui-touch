@@ -37,9 +37,13 @@ public class LibUI {
 
     public static Boolean useActionBar = true;
 
-    public static void start(Activity act) {
+    public static void init(Activity act) {
         ctx = (Context)act;
-        waitUntilActivityLoaded(act);
+    }
+
+    public static void start(Activity act) {
+        init(act);
+        initThiz(ctx);
     }
 
     // Common way of telling when activity is done loading

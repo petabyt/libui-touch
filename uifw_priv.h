@@ -71,10 +71,6 @@ struct CallbackData {
 	uintptr_t arg2;
 };
 
-static jobject view_from_ctrl(void *c) {
-	return ((struct uiAndroidControl *)c)->o;
-}
-
 static uiControl *uiControlFromView(jobject obj) {
 	// ...
 	return NULL;

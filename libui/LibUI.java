@@ -218,7 +218,7 @@ public class LibUI {
         return layout;
     }
 
-    private static void addTab(View parent, String name, View child) {
+    public static void addTab(View parent, String name, View child) {
         // TabLayout is child 0, add a new tab
         TabLayout tl = (TabLayout)(((ViewGroup)parent).getChildAt(0));
         TabLayout.Tab tab = tl.newTab();
