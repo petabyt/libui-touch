@@ -394,7 +394,7 @@ void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *sender, void *sen
 	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
 	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
 
-	jclass listener_c = (*env)->FindClass(env, "libui/LibUI$MySelectListener");
+	jclass listener_c = (*env)->FindClass(env, "dev/danielc/libui/LibUI$MySelectListener");
 	jmethodID click_init = (*env)->GetMethodID(env, listener_c, "<init>", "([B)V");
 	jobject listener = (*env)->NewObject(env, listener_c, click_init, arr);
 
@@ -580,7 +580,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar) 
 	struct uiAndroidControl *c = new_view_control(uiWindowSignature);
 
 	JNIEnv *env = uiAndroidGetEnv();
-	jclass class = (*env)->FindClass(env, "libui/LibUI$Popup");
+	jclass class = (*env)->FindClass(env, "dev/danielc/libui/LibUI$Popup");
 	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Ljava/lang/String;I)V");
 	jobject obj = (*env)->NewObject(env, class, constructor, (*env)->NewStringUTF(env, title), 0);
 	c->o = obj;
@@ -648,7 +648,7 @@ void uiWindowSetChild(uiWindow *w, uiControl *child) {
 		ctx_set_content_view(uiViewFromControl((child)));
 		return;
 	}
-	jclass class = (*env)->FindClass(env, "libui/LibUI$Popup");
+	jclass class = (*env)->FindClass(env, "dev/danielc/libui/LibUI$Popup");
 	jmethodID m_set_child = (*env)->GetMethodID(env, class, "setChild", "(Landroid/view/View;)V");
 	(*env)->CallVoidMethod(env, w->c.o, m_set_child, ((struct uiAndroidControl *)child)->o);
 }
@@ -728,7 +728,7 @@ void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData
 	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
 	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
 
-	jclass listener_c = (*env)->FindClass(env, "libui/LibUI$MyOnClickListener");
+	jclass listener_c = (*env)->FindClass(env, "dev/danielc/libui/LibUI$MyOnClickListener");
 	jmethodID click_init = (*env)->GetMethodID(env, listener_c, "<init>", "([B)V");
 	jobject listener = (*env)->NewObject(env, listener_c, click_init, arr);
 
@@ -880,7 +880,7 @@ int uiAndroidInit(JNIEnv *env, jobject context) {
 	local.ctx = (*env)->NewGlobalRef(env, context);
 
 	if (libui.class == 0x0) {
-		jclass class = (*env)->FindClass(env, "libui/LibUI");
+		jclass class = (*env)->FindClass(env, "dev/danielc/libui/LibUI");
 		libui.class = (*env)->NewGlobalRef(env, class);
 
 		jfieldID ctx_f = (*env)->GetStaticFieldID(env, class, "ctx", "Landroid/content/Context;");
