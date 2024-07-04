@@ -79,25 +79,7 @@ uiControl *uiControlFromID(const char *id);
  * @param name
  * @return
  */
-uiControl *uiExpandControl(char *name);
-
-/**
- * Get a file from the 'assets' directory of the app
- * @param env
- * @param ctx
- * @param filename Plain filename
- * @param length Will store length of file here
- * @return
- */
-void *jni_get_assets_file(JNIEnv *env, jobject ctx, char *filename, int *length);
-/**
- * Extension of jni_get_assets_file, returns a NULL-terminated text file
- * @param env
- * @param ctx
- * @param filename
- * @return
- */
-void *jni_get_txt_file(JNIEnv *env, jobject ctx, char *filename);
+uiControl *uiExpandControl(const char *name);
 
 #ifdef lua_h
 int luaopen_libuilua(lua_State *L);

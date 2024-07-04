@@ -2,7 +2,7 @@
 #define UIFW_PRIV_H
 
 #ifndef LIBUI
-#define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_libui_LibUI_##name
+#define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_dev_danielc_libui_LibUI_##name
 #endif
 
 struct UILibAndroidEnv {

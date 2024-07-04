@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -85,11 +86,8 @@ public class LibUI {
         public MyOnClickListener(byte[] struct) {
             this.struct = struct;
         }
-
         @Override
-        public void onClick(View v) {
-            LibUI.callFunction(struct);
-        }
+        public native void onClick(View v);
     }
 
     public static View form(String name) {
@@ -187,6 +185,34 @@ public class LibUI {
         }
 
         return ((Activity)ctx).onOptionsItemSelected(item);
+    }
+
+    public class CustomAdapter extends BaseAdapter {
+        public CustomAdapter() {
+        }
+
+        @Override
+        public int getCount() {
+            return 100;
+        }
+
+        @Override
+        public Object getItem(int i) {
+            return null;
+        }
+
+        @Override
+        public long getItemId(int i) {
+            return 0;
+        }
+
+        @Override
+        public View getView(int i, View view, ViewGroup viewGroup) {
+            return null;
+        }
+        //setContentView(R.layout.test);
+        //ListView lv = (ListView)findViewById(R.id.list);
+        //lv.setAdapter(new CustomAdapter());
     }
 
     // Being too fast doesn't feel right, brain need delay

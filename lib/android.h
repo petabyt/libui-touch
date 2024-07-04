@@ -14,70 +14,63 @@
 
 #define ANDROID_MODE_PRIVATE 0x0
 
-static inline jobject jni_get_package_name(JNIEnv *env, jobject context) {
-	jmethodID get_package_name = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getPackageName", "()Ljava/lang/String;");
-	return (*env)->CallObjectMethod(env, context, get_package_name);
-}
+enum AndroidViewVisibilities {
+	ANDROID_VIEW_VISIBLE = 0,
+	ANDROID_VIEW_INVISIBLE = 4,
+	ANDROID_VIEW_GONE = 9,
+};
 
-static inline jobject jni_get_layout_inflater(JNIEnv *env, jobject context) {
-	jmethodID get_inflater = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getLayoutInflater", "()Landroid/view/LayoutInflater;");
-	return (*env)->CallObjectMethod(env, context, get_inflater);
-}
+jobject jni_get_package_name(JNIEnv *env, jobject context);
+jobject jni_get_layout_inflater(JNIEnv *env, jobject context);
+jobject jni_get_resources(JNIEnv *env, jobject context);
+jobject jni_get_theme(JNIEnv *env, jobject context);
+jstring jni_concat_strings2(JNIEnv *env, jstring a, jstring b);
+jstring jni_concat_strings3(JNIEnv *env, jstring a, jstring b, jstring c);
 
-static inline jobject jni_get_resources(JNIEnv *env, jobject context) {
-	jmethodID get_res = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getResources", "()Landroid/content/res/Resources;");
-	return (*env)->CallObjectMethod(env, context, get_res);
-}
-
-static inline jobject jni_get_theme(JNIEnv *env, jobject context) {
-	jmethodID get_theme = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getTheme", "()Landroid/content/res/Resources$Theme;");
-	return (*env)->CallObjectMethod(env, context, get_theme);
-}
-
-static inline jstring jni_concat_strings2(JNIEnv *env, jstring a, jstring b) {
-	const char *a_ascii = (*env)->GetStringUTFChars(env, a, NULL);
-	const char *b_ascii = (*env)->GetStringUTFChars(env, b, NULL);
-
-	char *result = malloc(strlen(a_ascii) + strlen(b_ascii) + 1);
-	strcpy(result, a_ascii);
-	strcat(result, b_ascii);
-
-	jstring result_s = (*env)->NewStringUTF(env, result);
-
-	(*env)->ReleaseStringUTFChars(env, a, a_ascii);
-	(*env)->ReleaseStringUTFChars(env, b, b_ascii);
-
-	free(result);
-
-	return result_s;
-}
-
-static inline jstring jni_concat_strings3(JNIEnv *env, jstring a, jstring b, jstring c) {
-	const char *a_ascii = (*env)->GetStringUTFChars(env, a, NULL);
-	const char *b_ascii = (*env)->GetStringUTFChars(env, b, NULL);
-	const char *c_ascii = (*env)->GetStringUTFChars(env, c, NULL);
-
-	char *result = malloc(strlen(a_ascii) + strlen(b_ascii) + strlen(c_ascii) + 1);
-	strcpy(result, a_ascii);
-	strcat(result, b_ascii);
-	strcat(result, c_ascii);
-
-	void plat_dbg(char *fmt, ...);
-
-	jstring result_s = (*env)->NewStringUTF(env, result);
-
-	(*env)->ReleaseStringUTFChars(env, a, a_ascii);
-	(*env)->ReleaseStringUTFChars(env, b, b_ascii);
-	(*env)->ReleaseStringUTFChars(env, c, c_ascii);
-
-	free(result);
-
-	return result_s;
-}
+/**
+ * Get a file from the 'assets' directory of the app
+ * @param env
+ * @param ctx
+ * @param filename Plain filename
+ * @param length Will store length of file here
+ * @return
+ */
+void *jni_get_assets_file(JNIEnv *env, jobject ctx, const char *filename, int *length);
+/**
+ * Extension of jni_get_assets_file, returns a NULL-terminated text file
+ * @param env
+ * @param ctx
+ * @param filename
+ * @return
+ */
+void *jni_get_txt_file(JNIEnv *env, jobject ctx, const char *filename);
 
 jobject jni_get_pref_str(JNIEnv *env, jobject ctx, char *key);
 jint jni_get_pref_int(JNIEnv *env, jobject ctx, char *key);
 void jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str);
 void jni_set_pref_int(JNIEnv *env, jobject ctx, char *key, int x);
+const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
+
+// view.c
+jobject jni_get_main_looper(JNIEnv *env);
+void view_set_text_size(JNIEnv *env, jobject obj, float size);
+jint view_get_res_id(JNIEnv *env, jobject ctx, const char *key, const char *name);
+jobject view_get_by_id(JNIEnv *env, jobject ctx, const char *id);
+void ctx_set_content_layout(JNIEnv *env, jobject ctx, const char *name);
+void ctx_set_content_view(JNIEnv *env, jobject ctx, jobject view);
+void view_set_visibility(JNIEnv *env, jobject view, int v);
+void view_set_dimensions(JNIEnv *env, jobject view, int w, int h);
+void view_set_layout(JNIEnv *env, jobject view, int x, int y);
+void view_set_padding_px(JNIEnv *env, jobject obj, int padding);
+void view_set_focusable(JNIEnv *env, jobject obj);
+char *view_get_text(JNIEnv *env, jobject view);
+void view_set_text(JNIEnv *env, jobject view, const char *text);
+jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
+jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
+jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
+jobject view_new_tabhost(JNIEnv *env, jobject ctx);
+
+// callback.c
+jclass get_click_listener_class(JNIEnv *env);
 
 #endif
