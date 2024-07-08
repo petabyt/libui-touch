@@ -31,15 +31,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-//    sourceSets {
-//        main {
-//            java {
-//                srcDirs 'src'
-//                srcDirs 'src1'
-//                srcDirs 'src2'
-//            }
-//        }
-//    }
+    sourceSets {
+        main {
+            java {
+                if (!rootProject.hasProperty("USE_LITE")) {
+                    srcDirs 'java'
+                } else {
+                    srcDirs 'lite'
+                }
+            }
+        }
+    }
 }
 
 dependencies {
