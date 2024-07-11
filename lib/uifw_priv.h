@@ -1,6 +1,8 @@
 #ifndef UIFW_PRIV_H
 #define UIFW_PRIV_H
 
+#include "ui.h"
+
 #ifndef LIBUI
 #define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_dev_danielc_libui_LibUI_##name
 #endif
@@ -64,16 +66,5 @@ struct uiMultilineEntry { struct uiAndroidControl c; };
 struct uiEntry { struct uiAndroidControl c; };
 struct uiForm { struct uiAndroidControl c; };
 struct uiScroll { struct uiAndroidControl c; };
-
-struct CallbackData {
-	uintptr_t fn_ptr;
-	uintptr_t arg1;
-	uintptr_t arg2;
-};
-
-static uiControl *uiControlFromView(jobject obj) {
-	// ...
-	return NULL;
-}
 
 #endif

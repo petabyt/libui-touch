@@ -53,6 +53,7 @@ const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
 
 // view.c
 jobject jni_get_main_looper(JNIEnv *env);
+jobject jni_get_handler(JNIEnv *env);
 void view_set_text_size(JNIEnv *env, jobject obj, float size);
 jint view_get_res_id(JNIEnv *env, jobject ctx, const char *key, const char *name);
 jobject view_get_by_id(JNIEnv *env, jobject ctx, const char *id);
@@ -69,8 +70,13 @@ jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
 jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
 jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
 jobject view_new_tabhost(JNIEnv *env, jobject ctx);
+void viewgroup_addview(JNIEnv *env, jobject parent, jobject child);
+void jni_toast(JNIEnv *env, jobject ctx, const char *string);
+jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y);
 
 // callback.c
-jclass get_click_listener_class(JNIEnv *env);
+void view_add_native_click_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
+void jni_native_runnable(JNIEnv *env, void *fn, int argc, void *arg1, void *arg2);
+void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
 
 #endif

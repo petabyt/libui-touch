@@ -31,6 +31,14 @@ jobject jni_get_main_looper(JNIEnv *env) {
 	return (*env)->CallStaticObjectMethod(env, c, m);
 }
 
+jobject jni_get_handler(JNIEnv *env) {
+	jobject looper = jni_get_main_looper(env);
+	jclass handler_c = (*env)->FindClass(env, "android/os/Handler");
+	jmethodID init = (*env)->GetMethodID(env, handler_c, "<init>", "(Landroid/os/Looper;)V");
+	jobject handler = (*env)->NewObject(env, handler_c, init, looper);
+	return handler;
+}
+
 jobject jni_get_package_name(JNIEnv *env, jobject context) {
 	jmethodID get_package_name = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getPackageName", "()Ljava/lang/String;");
 	return (*env)->CallObjectMethod(env, context, get_package_name);
@@ -49,6 +57,21 @@ jobject jni_get_resources(JNIEnv *env, jobject context) {
 jobject jni_get_theme(JNIEnv *env, jobject context) {
 	jmethodID get_theme = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getTheme", "()Landroid/content/res/Resources$Theme;");
 	return (*env)->CallObjectMethod(env, context, get_theme);
+}
+
+void jni_toast(JNIEnv *env, jobject ctx, const char *string) {
+	(*env)->PushLocalFrame(env, 10);
+
+	jstring jbuffer = (*env)->NewStringUTF(env, string);
+
+	jclass toast_c = (*env)->FindClass(env, "android/widget/Toast");
+	jmethodID make_text_m = (*env)->GetStaticMethodID(env, toast_c, "makeText", "(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;");
+	jmethodID show_m = (*env)->GetMethodID(env, toast_c, "show", "()V");
+
+	jobject toast = (*env)->CallStaticObjectMethod(env, toast_c, make_text_m, ctx, jbuffer, 0x0);
+	(*env)->CallVoidMethod(env, toast, show_m);
+
+	(*env)->PopLocalFrame(env, NULL);
 }
 
 jstring jni_concat_strings2(JNIEnv *env, jstring a, jstring b) {

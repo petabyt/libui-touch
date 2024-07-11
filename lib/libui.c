@@ -148,40 +148,31 @@ static inline struct uiAndroidControl *new_view_control(int signature) {
 	return b;
 }
 
-uiControl *uiControlFromID(const char *id) {
+uiControl *uiControlFromView(jobject obj) {
 	JNIEnv *env = uiAndroidGetEnv();
-	jobject obj = (*env)->NewGlobalRef(env, view_get_by_id(env, uiAndroidGetCtx(), id));
-
 	int signature = uiLabelSignature;
 	if ((*env)->IsInstanceOf(env, obj, (*env)->FindClass(env, "android/widget/Button"))) {
 		signature = uiButtonSignature;
+	} else if ((*env)->IsInstanceOf(env, obj, (*env)->FindClass(env, "android/widget/TextView"))) {
+		signature = uiLabelSignature;
 	}
 
 	struct uiAndroidControl *ctl = new_view_control(uiButtonSignature);
 	ctl->o = obj;
 
-	return (uiControl *)ctl;
+	return uiControl(ctl);
 }
 
-// TODO: jnifunc
+uiControl *uiControlFromID(const char *id) {
+	JNIEnv *env = uiAndroidGetEnv();
+	jobject obj = (*env)->NewGlobalRef(env, view_get_by_id(env, uiAndroidGetCtx(), id));
+	return (uiControl *)uiControlFromView(obj);
+}
+
 static uiBox *new_uibox(int type) {
 	JNIEnv *env = uiAndroidGetEnv();
-
 	struct uiAndroidControl *b = new_view_control(uiBoxSignature);
-
-	jclass class = (*env)->FindClass(env, "android/widget/LinearLayout");
-	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, uiAndroidGetCtx());
-
-	jmethodID set_orientation_m = (*env)->GetMethodID(env, class, "setOrientation", "(I)V");
-	(*env)->CallVoidMethod(env, obj, set_orientation_m, type);
-
-	b->o = obj;
-
-	view_set_focusable(uiAndroidGetEnv(), obj);
-
-	view_set_layout(uiAndroidGetEnv(), obj, ANDROID_LAYOUT_MATCH_PARENT, ANDROID_LAYOUT_MATCH_PARENT);
-
+	view_new_linearlayout(env, uiAndroidGetCtx(), type, ANDROID_LAYOUT_MATCH_PARENT, ANDROID_LAYOUT_MATCH_PARENT);
 	return (uiBox *)b;
 }
 
@@ -228,23 +219,8 @@ int uiComboboxSelected(uiCombobox *c) {
 
 void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *sender, void *senderData), void *data) {
 	JNIEnv *env = uiAndroidGetEnv();
-
-	struct CallbackData call_data;
-	call_data.fn_ptr = (uintptr_t)f;
-	call_data.arg1 = (uintptr_t)c;
-	call_data.arg2 = (uintptr_t)data;
-
-	jobject *view = uiViewFromControl(c);
-
-	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
-	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
-
-	jclass listener_c = (*env)->FindClass(env, "dev/danielc/libui/LibUI$MySelectListener");
-	jmethodID click_init = (*env)->GetMethodID(env, listener_c, "<init>", "([B)V");
-	jobject listener = (*env)->NewObject(env, listener_c, click_init, arr);
-
-	jmethodID set_click = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setOnItemSelectedListener", "(Landroid/widget/AdapterView$OnItemSelectedListener;)V");
-	(*env)->CallVoidMethod(env, view, set_click, listener);
+	jobject view = uiViewFromControl(c);
+	view_add_native_select_listener(env, view, f, 1, data, NULL);
 }
 
 void uiComboboxClear(uiCombobox *c) {
@@ -525,15 +501,11 @@ void uiBoxAppend(uiBox *b, uiControl *child, int stretchy) {
 	struct uiAndroidControl *ctl = (struct uiAndroidControl *)child;
 	ctl->o = (*env)->NewGlobalRef(env, ctl->o);
 
-	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
-	jmethodID add_view = (*env)->GetMethodID(env, class, "addView", "(Landroid/view/View;)V");
-
-	(*env)->CallVoidMethod(env, b->c.o, add_view, ((struct uiAndroidControl *)child)->o);
+	viewgroup_addview(env, b->c.o, uiViewFromControl(child));
 
 	// Controls can optionally request to be set a certain width (only can be set after appending)
 	if (ctl->request_width) view_set_dimensions(env, ctl->o, ctl->request_width, 0);
 	if (ctl->request_height) view_set_dimensions(env, ctl->o, 0, ctl->request_height);
-	(*env)->DeleteLocalRef(env, class);
 }
 
 uiControl *uiBoxChild(uiBox *box, int index) {
@@ -575,41 +547,14 @@ int uiBoxNumChildren(uiBox *box) {
 
 void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData), void *data) {
 	JNIEnv *env = uiAndroidGetEnv();
-
-	struct CallbackData call_data;
-	call_data.fn_ptr = (uintptr_t)f;
-	call_data.arg1 = (uintptr_t)b;
-	call_data.arg2 = (uintptr_t)data;
-
 	jobject *view = uiViewFromControl(b);
-
-	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
-	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
-
-	jclass listener_c = (*env)->FindClass(env, "dev/danielc/libui/LibUI$MyOnClickListener");
-	jobject listener = (*env)->AllocObject(env, listener_c);
-
-	jfieldID field = (*env)->GetFieldID(env, listener_c, "struct", "[B");
-	(*env)->SetObjectField(env, listener, field, arr);
-
-	jmethodID set_click = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, view), "setOnClickListener", "(Landroid/view/View$OnClickListener;)V");
-	(*env)->CallVoidMethod(env, view, set_click, listener);
+	view_add_native_click_listener(env, view, (void *)f, 2, b, data);
 }
 
 void uiQueueMain(void (*f)(void *data), void *data) {
 	JNIEnv *env = uiAndroidGetEnv();
 
-	struct CallbackData call_data;
-	call_data.fn_ptr = (uintptr_t)f;
-	call_data.arg1 = (uintptr_t)data;
-	call_data.arg2 = (uintptr_t)NULL;
-
-	jbyteArray arr = (*env)->NewByteArray(env, sizeof(call_data));
-	(*env)->SetByteArrayRegion(env, arr, 0, sizeof(call_data), (const jbyte *)&call_data);
-
-	(*env)->CallStaticVoidMethod(
-			env, libui.class, libui.add_runnable_m, arr
-	);
+	jni_native_runnable(env, (void *)f, 1, data, NULL);
 }
 
 void uiTabAppend(uiTab *t, const char *name, uiControl *c) {
@@ -633,18 +578,7 @@ void uiToast(const char *format, ...) {
 	va_end(args);
 
 	JNIEnv *env = uiAndroidGetEnv();
-	(*env)->PushLocalFrame(env, 10);
-
-	jstring jbuffer = (*env)->NewStringUTF(env, buffer);
-
-	jclass toast_c = (*env)->FindClass(env, "android/widget/Toast");
-	jmethodID make_text_m = (*env)->GetStaticMethodID(env, toast_c, "makeText", "(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;");
-	jmethodID show_m = (*env)->GetMethodID(env, toast_c, "show", "()V");
-
-	jobject toast = (*env)->CallStaticObjectMethod(env, toast_c, make_text_m, uiAndroidGetCtx(), jbuffer, 0x0);
-	(*env)->CallVoidMethod(env, toast, show_m);
-
-	(*env)->PopLocalFrame(env, NULL);
+	jni_toast(env, uiAndroidGetCtx(), buffer);
 }
 
 uiControl *uiExpandControl(const char *name) {
@@ -692,14 +626,6 @@ int uiAndroidInit(JNIEnv *env, jobject context) {
 
 		jfieldID ctx_f = (*env)->GetStaticFieldID(env, class, "ctx", "Landroid/content/Context;");
 		(*env)->SetStaticObjectField(env, class, ctx_f, context);
-
-		libui.form_m = (*env)->GetStaticMethodID(env, class, "form", "(Ljava/lang/String;)Landroid/view/View;");
-		libui.tab_layout_m = (*env)->GetStaticMethodID(env, class, "tabLayout", "()Landroid/view/View;");
-
-		libui.add_tab_m = (*env)->GetStaticMethodID(env, class, "addTab", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
-		libui.form_add_m = (*env)->GetStaticMethodID(env, class, "formAppend", "(Landroid/view/View;Ljava/lang/String;Landroid/view/View;)V");
-
-		libui.add_runnable_m = (*env)->GetStaticMethodID(env, class, "runRunnable", "([B)V");
 	}
 
 	return 0;
@@ -713,42 +639,6 @@ uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent) {
 }
 
 #pragma GCC visibility pop
-
-LIBUI(void, 00024MyOnClickListener_onClick)(JNIEnv* env, jobject thiz, jobject view) {
-	jfieldID field = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, thiz), "struct", "[B");
-	jobject arr = (*env)->GetObjectField(env, thiz, field);
-	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
-
-	if (data->fn_ptr == 0x0) abort();
-
-	void (*ptr_f)(uintptr_t, uintptr_t) = (void *)data->fn_ptr;
-	ptr_f(data->arg1, data->arg2);
-}
-
-LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, jbyteArray arr) {
-	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
-
-	if (data->fn_ptr == 0x0) abort();
-
-	void (*ptr_f)(uintptr_t, uintptr_t) = (void *)data->fn_ptr;
-	ptr_f(data->arg1, data->arg2);
-}
-
-LIBUI(jobject, callObjectFunction)(JNIEnv *env, jobject thiz, jbyteArray arr, jobjectArray args) {
-	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
-
-	if (data->fn_ptr == 0x0) abort();
-
-	if ((*env)->GetArrayLength(env, args) >= 1) {
-		data->arg1 = (uintptr_t)(*env)->GetObjectArrayElement(env, args, 0);
-	}
-	if ((*env)->GetArrayLength(env, args) >= 2) {
-		data->arg2 = (uintptr_t)(*env)->GetObjectArrayElement(env, args, 1);
-	}
-
-	jobject (*ptr_f)(uintptr_t, uintptr_t) = (void *)data->fn_ptr;
-	return ptr_f(data->arg1, data->arg2);
-}
 
 LIBUI(void, initThiz)(JNIEnv *env, jobject thiz, jobject ctx) {
 	uiAndroidInit(env, ctx);
