@@ -7,6 +7,12 @@
 
 #include "android.h"
 
+jobject view_get_context(JNIEnv *env, jobject view) {
+	jclass view_c = (*env)->FindClass(env, "android/view/View");
+	jmethodID get_context_m = (*env)->GetMethodID(env, view_c, "getContext", "()Landroid/content/Context;");
+	return (*env)->CallObjectMethod(env, view, get_context_m);
+}
+
 jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y) {
 	jclass linear_layout_class = (*env)->FindClass(env, "android/widget/LinearLayout");
 	jmethodID linear_layout_constructor = (*env)->GetMethodID(env, linear_layout_class, "<init>", "(Landroid/content/Context;)V");
@@ -21,7 +27,27 @@ jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, 
 	return linear_layout;
 }
 
-jobject view_new_tabhost(JNIEnv *env, jobject ctx) {
+jobject tabhost_new(JNIEnv *env, jobject ctx) {
+#if 0
+	LinearLayout layout = new LinearLayout(ctx);
+	layout.setOrientation(LinearLayout.VERTICAL);
+	layout.setLayoutParams(new ViewGroup.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT,
+			ViewGroup.LayoutParams.WRAP_CONTENT));
+
+	TextView title = new TextView(ctx);
+	title.setPadding(5, 5, 5, 5);
+	title.setTypeface(Typeface.DEFAULT_BOLD);
+	title.setText(name);
+	title.setLayoutParams(new LinearLayout.LayoutParams(
+			LayoutParams.MATCH_PARENT,
+			LayoutParams.WRAP_CONTENT
+	));
+
+	layout.addView(title);
+
+	return layout;
+#endif
 	jclass tab_host_class = (*env)->FindClass(env, "android/widget/TabHost");
 	jmethodID tab_host_constructor = (*env)->GetMethodID(env, tab_host_class, "<init>", "(Landroid/content/Context;Landroid/util/AttributeSet;)V");
 	jobject tab_host = (*env)->NewObject(env, tab_host_class, tab_host_constructor, ctx, NULL);
@@ -276,6 +302,43 @@ void viewgroup_addview(JNIEnv *env, jobject parent, jobject child) {
 	jclass class = (*env)->FindClass(env, "android/view/ViewGroup");
 	jmethodID add_view = (*env)->GetMethodID(env, class, "addView", "(Landroid/view/View;)V");
 	(*env)->CallVoidMethod(env, parent, add_view, child);
+}
+
+void popupwindow_open(JNIEnv *env, jobject ctx, jobject popup) {
+	jobject root_view = jni_activity_get_root_view(env, ctx);
+	jmethodID show_at_location_method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, popup), "showAtLocation", "(Landroid/view/View;III)V");
+	(*env)->CallVoidMethod(env, popup, show_at_location_method, root_view, ANDROID_GRAVITY_CENTER, 0, 0);
+}
+
+void popupwindow_set_content(JNIEnv *env, jobject popup, jobject view) {
+	jclass popup_c = (*env)->FindClass(env, "android/widget/PopupWindow");
+	jmethodID set_content_view_method = (*env)->GetMethodID(env, popup_c, "setContentView", "(Landroid/view/View;)V");
+	(*env)->CallVoidMethod(env, popup, set_content_view_method, view);
+}
+
+jobject popupwindow_new(JNIEnv *env, jobject ctx, int drawable_id) {
+	jobject display_metrics = jni_get_display_metrics(env, ctx);
+
+	jclass popup_c = (*env)->FindClass(env, "android/widget/PopupWindow");
+	jmethodID init_m = (*env)->GetMethodID(env, popup_c, "<init>", "(II)V");
+
+	jfieldID width_f = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, display_metrics), "heightPixels", "I");
+	int width = (*env)->GetIntField(env, display_metrics, width_f);
+	jfieldID height_f = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, display_metrics), "heightPixels", "I");
+	int height = (*env)->GetIntField(env, display_metrics, height_f);
+
+	jobject window = (*env)->NewObject(env, popup_c, init_m, width, height);
+
+	jmethodID touchable_m = (*env)->GetMethodID(env, popup_c, "setOutsideTouchable", "(Z)V");
+	(*env)->CallVoidMethod(env, window, touchable_m, JNI_TRUE);
+
+	if (drawable_id != 0) {
+		jobject drawable = jni_get_drawable(env, ctx, drawable_id);
+		jmethodID set_background_drawable_method = (*env)->GetMethodID(env, popup_c, "setBackgroundDrawable", "(Landroid/graphics/drawable/Drawable;)V");
+		(*env)->CallVoidMethod(env, window, set_background_drawable_method, drawable);
+	}
+
+	return window;
 }
 
 #if 0

@@ -25,6 +25,20 @@ jobject jni_get_display_metrics(JNIEnv *env, jobject ctx) {
 	return display_metrics;
 }
 
+jobject jni_activity_get_root_view(JNIEnv *env, jobject ctx) {
+	jclass activity_class = (*env)->FindClass(env, "android/app/Activity");
+	jmethodID get_window_method = (*env)->GetMethodID(env, activity_class, "getWindow", "()Landroid/view/Window;");
+	jobject window_obj = (*env)->CallObjectMethod(env, ctx, get_window_method);
+
+	jclass window_class = (*env)->GetObjectClass(env, window_obj);
+	jmethodID get_decor_view_method = (*env)->GetMethodID(env, window_class, "getDecorView", "()Landroid/view/View;");
+	jobject decor_view = (*env)->CallObjectMethod(env, window_obj, get_decor_view_method);
+
+	jclass view_class = (*env)->GetObjectClass(env, decor_view);
+	jmethodID get_root_view_method = (*env)->GetMethodID(env, view_class, "getRootView", "()Landroid/view/View;");
+	return (*env)->CallObjectMethod(env, decor_view, get_root_view_method);
+}
+
 jobject jni_get_main_looper(JNIEnv *env) {
 	jclass c = (*env)->FindClass(env, "android/os/Looper");
 	jmethodID m = (*env)->GetStaticMethodID(env, c, "getMainLooper", "()Landroid/os/Looper;");
@@ -52,6 +66,14 @@ jobject jni_get_layout_inflater(JNIEnv *env, jobject context) {
 jobject jni_get_resources(JNIEnv *env, jobject context) {
 	jmethodID get_res = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getResources", "()Landroid/content/res/Resources;");
 	return (*env)->CallObjectMethod(env, context, get_res);
+}
+
+jobject jni_get_drawable(JNIEnv *env, jobject ctx, int resid) {
+	jobject res = jni_get_resources(env, ctx);
+	jclass resources_class = (*env)->FindClass(env, "android/content/res/Resources");
+	jclass drawable_class = (*env)->FindClass(env, "android/graphics/drawable/Drawable");
+	jmethodID get_drawable_method = (*env)->GetMethodID(env, resources_class, "getDrawable", "(I)Landroid/graphics/drawable/Drawable;");
+	return (*env)->CallObjectMethod(env, res, get_drawable_method, resid);
 }
 
 jobject jni_get_theme(JNIEnv *env, jobject context) {

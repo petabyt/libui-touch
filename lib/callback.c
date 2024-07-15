@@ -18,14 +18,20 @@ struct CallbackData {
 static void function_callback(JNIEnv *env, jbyteArray arr) {
 	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
 	if (data->fn_ptr == 0x0) abort();
-	typedef void fn2(uintptr_t a, uintptr_t b);
-	typedef void fn1(uintptr_t a);
 	if (data->argc == 2) {
+		typedef void fn2(uintptr_t a, uintptr_t b);
 		fn2 *ptr_f = (fn2 *)data->fn_ptr;
 		ptr_f(data->arg1, data->arg2);
 	} else if (data->argc == 1) {
+		typedef void fn1(uintptr_t a);
 		fn1 *ptr_f = (fn1 *)data->fn_ptr;
 		ptr_f(data->arg1);
+	} else if (data->argc == 0) {
+		typedef void fn0(void);
+		fn0 *ptr_f = (fn0 *)data->fn_ptr;
+		ptr_f();
+	} else {
+		abort();
 	}
 }
 
@@ -53,6 +59,7 @@ void view_add_native_click_listener(JNIEnv *env, jobject view, void *fn, int arg
 
 void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2) {
 	struct CallbackData call_data;
+	call_data.argc = argc;
 	call_data.fn_ptr = (uintptr_t)fn;
 	call_data.arg1 = (uintptr_t)arg1;
 	call_data.arg2 = (uintptr_t)arg2;
@@ -72,7 +79,7 @@ void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int ar
 }
 
 
-void jni_native_runnable(JNIEnv *env, void *fn, int argc, void *arg1, void *arg2) {
+void jni_native_runnable(JNIEnv *env, jobject ctx, void *fn, int argc, void *arg1, void *arg2) {
 	struct CallbackData call_data;
 	call_data.fn_ptr = (uintptr_t)fn;
 	call_data.argc = argc;
@@ -85,13 +92,16 @@ void jni_native_runnable(JNIEnv *env, void *fn, int argc, void *arg1, void *arg2
 	jclass listener_c = (*env)->FindClass(env, "dev/danielc/libui/LibUI$MyRunnable");
 	jobject listener = (*env)->AllocObject(env, listener_c);
 
+	jfieldID ctx_f = (*env)->GetFieldID(env, listener_c, "ctx", "Landroid/content/Context;");
+	(*env)->SetObjectField(env, listener, ctx_f, ctx);
+
 	jfieldID field = (*env)->GetFieldID(env, listener_c, "struct", "[B");
 	(*env)->SetObjectField(env, listener, field, arr);
 
 	jobject handler = jni_get_handler(env);
 
-	jmethodID post_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, handler), "post", "(Ljava/lang/Runnable;)V");
-	(*env)->CallVoidMethod(env, handler, post_m, listener);
+	jmethodID post_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, handler), "post", "(Ljava/lang/Runnable;)Z");
+	(*env)->CallBooleanMethod(env, handler, post_m, listener);
 }
 
 LIBUI(jobject, 00024MyTabFactory_createTabContent)(JNIEnv* env, jobject thiz, jstring tab) {
@@ -100,6 +110,7 @@ LIBUI(jobject, 00024MyTabFactory_createTabContent)(JNIEnv* env, jobject thiz, js
 }
 
 LIBUI(void, 00024MyOnClickListener_onClick)(JNIEnv* env, jobject thiz, jobject view) {
+	ui_android_set_env_ctx(env, view_get_context(env, view));
 	jfieldID field = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, thiz), "struct", "[B");
 	jobject arr = (*env)->GetObjectField(env, thiz, field);
 	function_callback(env, arr);
@@ -111,12 +122,16 @@ LIBUI(void, 00024MySelectListener_onNothingSelected)(JNIEnv* env, jobject thiz, 
 
 LIBUI(void, 00024MySelectListener_onItemSelected)(JNIEnv* env, jobject thiz, jobject parent,
 		jobject view, jint position, jlong id) {
+	ui_android_set_env_ctx(env, view_get_context(env, view));
 	jfieldID field = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, thiz), "struct", "[B");
 	jobject arr = (*env)->GetObjectField(env, thiz, field);
 	function_callback(env, arr);
 }
 
 LIBUI(void, 00024MyRunnable_run)(JNIEnv* env, jobject thiz) {
+	jfieldID ctx_f = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, thiz), "ctx", "Landroid/content/Context;");
+	ui_android_set_env_ctx(env, (*env)->GetObjectField(env, thiz, ctx_f));
+
 	jfieldID field = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, thiz), "struct", "[B");
 	jobject arr = (*env)->GetObjectField(env, thiz, field);
 	function_callback(env, arr);

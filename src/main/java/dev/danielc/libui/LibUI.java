@@ -1,9 +1,11 @@
 package dev.danielc.libui;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Typeface;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -27,7 +29,7 @@ import android.widget.Toast;
 import android.app.ActionBar;
 
 public class LibUI {
-    public static Context ctx = null;
+    public static Context ctx = null; // obsolete??
     public static ActionBar actionBar = null;
 
     // uiWindow (popup) background drawable style resource
@@ -36,34 +38,24 @@ public class LibUI {
     // Background drawable resource for buttons
     public static int buttonBackgroundResource = 0;
 
-    public static Boolean useActionBar = true;
+    public static native void callFunction(byte[] struct); // deprecate
+    public static native void initThiz(Context ctx);
 
-    public static void init(Activity act) {
-        ctx = (Context)act;
-    }
-
-    public static void start(Activity act) {
-        init(act);
-        initThiz(ctx);
-    }
-
-    // Common way of telling when activity is done loading
-    private static void waitUntilActivityLoaded(Activity activity) {
-        ViewTreeObserver viewTreeObserver = activity.getWindow().getDecorView().getViewTreeObserver();
-        viewTreeObserver.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                activity.getWindow().getDecorView().getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                init();
-            }
-        });
-    }
-
-    private static void init() {
-        if (useActionBar) {
-            actionBar = ((Activity)ctx).getActionBar();
-            actionBar.setDisplayHomeAsUpEnabled(true);
-        }
+    public class MyActivityLifecycle implements Application.ActivityLifecycleCallbacks {
+        @Override
+        public native void onActivityCreated(Activity activity, Bundle bundle);
+        @Override
+        public native void onActivityStarted(Activity activity);
+        @Override
+        public native void onActivityResumed(Activity activity);
+        @Override
+        public native void onActivityPaused(Activity activity);
+        @Override
+        public native void onActivityStopped(Activity activity);
+        @Override
+        public native void onActivitySaveInstanceState(Activity activity, Bundle bundle);
+        @Override
+        public native void onActivityDestroyed(Activity activity);
     }
 
     public class CustomAdapter extends BaseAdapter {
@@ -100,10 +92,8 @@ public class LibUI {
 
     private static class MyRunnable implements Runnable {
         byte[] struct;
+        Context ctx;
         @Override
         public native void run();
     }
-
-    public static native void callFunction(byte[] struct);
-    public static native void initThiz(Context ctx);
 }

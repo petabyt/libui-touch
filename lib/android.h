@@ -14,6 +14,8 @@
 
 #define ANDROID_MODE_PRIVATE 0x0
 
+#define ANDROID_GRAVITY_CENTER 0x00000011
+
 enum AndroidViewVisibilities {
 	ANDROID_VIEW_VISIBLE = 0,
 	ANDROID_VIEW_INVISIBLE = 4,
@@ -26,6 +28,11 @@ jobject jni_get_resources(JNIEnv *env, jobject context);
 jobject jni_get_theme(JNIEnv *env, jobject context);
 jstring jni_concat_strings2(JNIEnv *env, jstring a, jstring b);
 jstring jni_concat_strings3(JNIEnv *env, jstring a, jstring b, jstring c);
+jobject jni_get_drawable(JNIEnv *env, jobject ctx, int resid);
+jobject jni_get_display_metrics(JNIEnv *env, jobject ctx);
+jobject jni_get_main_looper(JNIEnv *env);
+jobject jni_get_handler(JNIEnv *env);
+jobject jni_activity_get_root_view(JNIEnv *env, jobject ctx);
 
 /**
  * Get a file from the 'assets' directory of the app
@@ -43,22 +50,25 @@ void *jni_get_assets_file(JNIEnv *env, jobject ctx, const char *filename, int *l
  * @param filename
  * @return
  */
-void *jni_get_txt_file(JNIEnv *env, jobject ctx, const char *filename);
+jobject popupwindow_new(JNIEnv *env, jobject ctx, int drawable_id);
+void popupwindow_set_content(JNIEnv *env, jobject popup, jobject view);
+void popupwindow_open(JNIEnv *env, jobject ctx, jobject popup);
 
+/// Set/Get permanent settings
 jobject jni_get_pref_str(JNIEnv *env, jobject ctx, char *key);
 jint jni_get_pref_int(JNIEnv *env, jobject ctx, char *key);
 void jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str);
 void jni_set_pref_int(JNIEnv *env, jobject ctx, char *key, int x);
+/// Get allocated string from R.strings.*
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
 
+jobject popup_new(JNIEnv *env, jobject ctx, int drawable_id);
+
 // view.c
-jobject jni_get_main_looper(JNIEnv *env);
-jobject jni_get_handler(JNIEnv *env);
+jobject view_get_context(JNIEnv *env, jobject view);
 void view_set_text_size(JNIEnv *env, jobject obj, float size);
 jint view_get_res_id(JNIEnv *env, jobject ctx, const char *key, const char *name);
 jobject view_get_by_id(JNIEnv *env, jobject ctx, const char *id);
-void ctx_set_content_layout(JNIEnv *env, jobject ctx, const char *name);
-void ctx_set_content_view(JNIEnv *env, jobject ctx, jobject view);
 void view_set_visibility(JNIEnv *env, jobject view, int v);
 void view_set_dimensions(JNIEnv *env, jobject view, int w, int h);
 void view_set_layout(JNIEnv *env, jobject view, int x, int y);
@@ -66,17 +76,25 @@ void view_set_padding_px(JNIEnv *env, jobject obj, int padding);
 void view_set_focusable(JNIEnv *env, jobject obj);
 char *view_get_text(JNIEnv *env, jobject view);
 void view_set_text(JNIEnv *env, jobject view, const char *text);
+jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y);
+
 jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
 jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
 jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
-jobject view_new_tabhost(JNIEnv *env, jobject ctx);
+jobject tabhost_new(JNIEnv *env, jobject ctx);
 void viewgroup_addview(JNIEnv *env, jobject parent, jobject child);
 void jni_toast(JNIEnv *env, jobject ctx, const char *string);
-jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y);
+
+void ctx_set_content_layout(JNIEnv *env, jobject ctx, const char *name);
+void ctx_set_content_view(JNIEnv *env, jobject ctx, jobject view);
 
 // callback.c
+// Callback and listener API
 void view_add_native_click_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
-void jni_native_runnable(JNIEnv *env, void *fn, int argc, void *arg1, void *arg2);
+void jni_native_runnable(JNIEnv *env, jobject ctx, void *fn, int argc, void *arg1, void *arg2);
 void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
+
+// Env/Context setter
+void ui_android_set_env_ctx(JNIEnv *env, jobject ctx);
 
 #endif

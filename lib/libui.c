@@ -13,14 +13,11 @@
 #include "uifw_priv.h"
 #include "android.h"
 
-static struct AndroidLocal {
+struct AndroidLocal {
 	JNIEnv *env;
 	jobject ctx;
-	jclass class;
-}local;
-
-// zeroed in bss
-struct UILibAndroidEnv libui = {0};
+};
+__thread struct AndroidLocal local = {0, 0};
 
 #pragma GCC visibility push(internal)
 
@@ -28,15 +25,29 @@ jobject uiViewFromControl(void *c) {
 	return ((struct uiAndroidControl *)c)->o;
 }
 
-void *uiAndroidGetCtx() {
+void ui_android_set_env_ctx(JNIEnv *env, jobject ctx) {
+	local.ctx = ctx;
+	local.env = env;
+	// TODO: Set LibUI.ctx
+}
+
+void *uiAndroidGetCtx(void) {
+	if (local.ctx == 0) {
+		__android_log_write(ANDROID_LOG_ERROR, "libui", "NULL ctx");
+		abort();
+	}
 	return local.ctx;
 }
 
-void *uiAndroidGetEnv() {
+void *uiAndroidGetEnv(void) {
+	if (local.env == NULL) {
+		__android_log_write(ANDROID_LOG_ERROR, "libui", "NULL env");
+		abort();
+	}
 	return local.env;
 }
 
-static int check_exception() {
+static int check_exception(void) {
 	JNIEnv *env = uiAndroidGetEnv();
 	if ((*env)->ExceptionCheck(env)) {
 		(*env)->ExceptionDescribe(env);
@@ -45,6 +56,10 @@ static int check_exception() {
 	}
 
 	return 0;
+}
+
+static jclass libui_class(JNIEnv *env) {
+	return (*env)->FindClass(env, "dev/danielc/libui/LibUI");
 }
 
 void uiAndroidSetContent(uiControl *c) {
@@ -94,7 +109,11 @@ void uiBoxSetPadded(uiBox *b, int padded) {
 
 int uiBoxPadded(uiBox *b) { return 0; }
 
-void uiControlShow(uiControl *c) {}
+void uiControlShow(uiControl *c) {
+	if (c->Signature == uiWindowSignature) {
+		popupwindow_open(uiAndroidGetEnv(), uiAndroidGetCtx(), uiViewFromControl(c));
+	}
+}
 void uiControlHide(uiControl *c) {}
 
 static void view_destroy(jobject v) {
@@ -220,7 +239,7 @@ int uiComboboxSelected(uiCombobox *c) {
 void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *sender, void *senderData), void *data) {
 	JNIEnv *env = uiAndroidGetEnv();
 	jobject view = uiViewFromControl(c);
-	view_add_native_select_listener(env, view, f, 1, data, NULL);
+	view_add_native_select_listener(env, view, (void *)f, 2, c, data);
 }
 
 void uiComboboxClear(uiCombobox *c) {
@@ -301,8 +320,8 @@ uiButton *uiNewButton(const char *text) {
 
 	// TODO: condense
 #if 1
-	jfieldID button_bg_f = (*env)->GetStaticFieldID(env, libui.class, "buttonBackgroundResource", "I");
-	jint button_bg = (*env)->GetStaticIntField(env, libui.class, button_bg_f);
+	jfieldID button_bg_f = (*env)->GetStaticFieldID(env, libui_class(env), "buttonBackgroundResource", "I");
+	jint button_bg = (*env)->GetStaticIntField(env, libui_class(env), button_bg_f);
 	if (button_bg != 0) {
 		jmethodID get_drawable_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getDrawable", "(ILandroid/content/res/Resources$Theme;)Landroid/graphics/drawable/Drawable;");
 
@@ -367,11 +386,11 @@ uiTab *uiNewTab() {
 	struct uiAndroidControl *t = new_view_control(uiTabSignature);
 
 	if (jni_does_class_exist(env, "androidx/ViewPager2")) {
-		jmethodID new_tab_m = (*env)->GetStaticMethodID(env, libui.class, "tabLayout", "()Landroid/view/View;");
-		jobject tab = (*env)->CallStaticObjectMethod(env, libui.class, new_tab_m);
+		jmethodID new_tab_m = (*env)->GetStaticMethodID(env, libui_class(env), "tabLayout", "()Landroid/view/View;");
+		jobject tab = (*env)->CallStaticObjectMethod(env, libui_class(env), new_tab_m);
 		t->o = tab;
 	} else {
-		t->o = view_new_tabhost(env, uiAndroidGetCtx());
+		t->o = tabhost_new(env, uiAndroidGetCtx());
 	}
 
 	return (uiTab *)t;
@@ -417,10 +436,10 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar) 
 	struct uiAndroidControl *c = new_view_control(uiWindowSignature);
 
 	JNIEnv *env = uiAndroidGetEnv();
-	jclass class = (*env)->FindClass(env, "dev/danielc/libui/LibUI$Popup");
-	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Ljava/lang/String;I)V");
-	jobject obj = (*env)->NewObject(env, class, constructor, (*env)->NewStringUTF(env, title), 0);
-	c->o = obj;
+
+	jstring jtitle = (*env)->NewStringUTF(env, title);
+
+	c->o = popupwindow_new(env, uiAndroidGetCtx(), 0);
 
 	return (uiWindow *)c;
 }
@@ -429,11 +448,11 @@ uiGroup *uiNewGroup(const char *title) {
 	JNIEnv *env = uiAndroidGetEnv();
 	struct uiAndroidControl *f = new_view_control(uiGroupSignature);
 
-	jobject form = (*env)->CallStaticObjectMethod(
-			env, libui.class, libui.form_m,
-			(*env)->NewStringUTF(env, title)
-	);
-	f->o = form;
+//	jobject form = (*env)->CallStaticObjectMethod(
+//			env, libui_class(env), libui.form_m,
+//			(*env)->NewStringUTF(env, title)
+//	);
+//	f->o = form;
 
 	return (uiGroup *)f;
 }
@@ -457,10 +476,10 @@ uiForm *uiNewForm() {
 
 void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy) {
 	JNIEnv *env = uiAndroidGetEnv();
-	(*env)->CallStaticVoidMethod(
-			env, libui.class, libui.form_add_m,
-			f->c.o, (*env)->NewStringUTF(env, label), ((uiAndroidControl *)c)->o
-	);
+//	(*env)->CallStaticVoidMethod(
+//			env, libui_class(env), libui.form_add_m,
+//			f->c.o, (*env)->NewStringUTF(env, label), ((uiAndroidControl *)c)->o
+//	);
 }
 
 void uiButtonSetText(uiButton *b, const char *text) {
@@ -485,9 +504,8 @@ void uiWindowSetChild(uiWindow *w, uiControl *child) {
 		ctx_set_content_view(env, uiAndroidGetCtx(), uiViewFromControl((child)));
 		return;
 	}
-	jclass class = (*env)->FindClass(env, "dev/danielc/libui/LibUI$Popup");
-	jmethodID m_set_child = (*env)->GetMethodID(env, class, "setChild", "(Landroid/view/View;)V");
-	(*env)->CallVoidMethod(env, w->c.o, m_set_child, ((struct uiAndroidControl *)child)->o);
+
+	popupwindow_set_content(env, uiViewFromControl(w), uiViewFromControl(child));
 }
 
 void uiProgressBarSetValue(uiProgressBar *p, int n) {
@@ -553,21 +571,20 @@ void uiButtonOnClicked(uiButton *b, void (*f)(uiButton *sender, void *senderData
 
 void uiQueueMain(void (*f)(void *data), void *data) {
 	JNIEnv *env = uiAndroidGetEnv();
-
-	jni_native_runnable(env, (void *)f, 1, data, NULL);
+	jni_native_runnable(env, uiAndroidGetCtx(), (void *)f, 1, data, NULL);
 }
 
 void uiTabAppend(uiTab *t, const char *name, uiControl *c) {
 	JNIEnv *env = uiAndroidGetEnv();
 	((uiAndroidControl *)c)->o = (*env)->NewGlobalRef(env, ((uiAndroidControl *)c)->o);
 
-	jstring jname = (*env)->NewStringUTF(env, name);
-	(*env)->CallStaticVoidMethod(
-			env, libui.class, libui.add_tab_m,
-			t->c.o, jname, ((uiAndroidControl *)c)->o
-	);
+//	jstring jname = (*env)->NewStringUTF(env, name);
+//	(*env)->CallStaticVoidMethod(
+//			env, libui_class(env), libui.add_tab_m,
+//			t->c.o, jname, ((uiAndroidControl *)c)->o
+//	);
 
-	(*env)->DeleteLocalRef(env, jname);
+//	(*env)->DeleteLocalRef(env, jname);
 }
 
 void uiToast(const char *format, ...) {
@@ -616,23 +633,18 @@ int uiAndroidClose(JNIEnv *env) {
 }
 
 int uiAndroidInit(JNIEnv *env, jobject context) {
-	// If new context != old context, free or use hashOf crap solution blah blah
-	local.env = env;
-	local.ctx = (*env)->NewGlobalRef(env, context);
+	ui_android_set_env_ctx(env, context);
 
-	if (libui.class == 0x0) {
-		jclass class = (*env)->FindClass(env, "dev/danielc/libui/LibUI");
-		libui.class = (*env)->NewGlobalRef(env, class);
-
-		jfieldID ctx_f = (*env)->GetStaticFieldID(env, class, "ctx", "Landroid/content/Context;");
-		(*env)->SetStaticObjectField(env, class, ctx_f, context);
-	}
+	jclass class = libui_class(env);
+	jfieldID ctx_f = (*env)->GetStaticFieldID(env, class, "ctx", "Landroid/content/Context;");
+	(*env)->SetStaticObjectField(env, class, ctx_f, context);
 
 	return 0;
 }
 
 uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent) {
 	struct uiBox *box = malloc(sizeof(struct uiBox));
+	((uiAndroidControl *)box)->is_activity = 1;
 	uiAndroidInit(env, context);
 	box->c.o = parent;
 	return box;
@@ -642,8 +654,4 @@ uiBox *uiAndroidBox(JNIEnv *env, jobject context, jobject parent) {
 
 LIBUI(void, initThiz)(JNIEnv *env, jobject thiz, jobject ctx) {
 	uiAndroidInit(env, ctx);
-}
-
-LIBUI(void, destructThiz)(JNIEnv *env, jobject thiz, jobject ctx) {
-	//uiAndroidInit(env, ctx);
 }
