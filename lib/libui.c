@@ -191,7 +191,7 @@ uiControl *uiControlFromID(const char *id) {
 static uiBox *new_uibox(int type) {
 	JNIEnv *env = uiAndroidGetEnv();
 	struct uiAndroidControl *b = new_view_control(uiBoxSignature);
-	view_new_linearlayout(env, uiAndroidGetCtx(), type, ANDROID_LAYOUT_MATCH_PARENT, ANDROID_LAYOUT_MATCH_PARENT);
+	b->o = view_new_linearlayout(env, uiAndroidGetCtx(), type, ANDROID_LAYOUT_MATCH_PARENT, ANDROID_LAYOUT_MATCH_PARENT);
 	return (uiBox *)b;
 }
 
@@ -577,6 +577,8 @@ void uiQueueMain(void (*f)(void *data), void *data) {
 void uiTabAppend(uiTab *t, const char *name, uiControl *c) {
 	JNIEnv *env = uiAndroidGetEnv();
 	((uiAndroidControl *)c)->o = (*env)->NewGlobalRef(env, ((uiAndroidControl *)c)->o);
+
+	view_tabhost_add(env, name, uiViewFromControl(t), uiViewFromControl(c));
 
 //	jstring jname = (*env)->NewStringUTF(env, name);
 //	(*env)->CallStaticVoidMethod(

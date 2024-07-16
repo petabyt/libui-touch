@@ -109,7 +109,7 @@ void view_tabhost_add(JNIEnv *env, const char *name, jobject parent, jobject chi
 	(*env)->SetObjectField(env, factory, field, child);
 
 	jmethodID set_content_m = (*env)->GetMethodID(env, tab_spec_class, "setContent", "(Landroid/widget/TabHost$TabContentFactory;)Landroid/widget/TabHost$TabSpec;");
-	(*env)->CallObjectMethod(env, tab_spec, set_content_m, name_j);
+	(*env)->CallObjectMethod(env, tab_spec, set_content_m, factory);
 
 	jmethodID add_tab_m = (*env)->GetMethodID(env, tab_host_class, "addTab", "(Landroid/widget/TabHost$TabSpec;)V");
 	(*env)->CallVoidMethod(env, parent, add_tab_m, tab_spec);

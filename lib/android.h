@@ -82,6 +82,7 @@ jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
 jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
 jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
 jobject tabhost_new(JNIEnv *env, jobject ctx);
+void view_tabhost_add(JNIEnv *env, const char *name, jobject parent, jobject child);
 void viewgroup_addview(JNIEnv *env, jobject parent, jobject child);
 void jni_toast(JNIEnv *env, jobject ctx, const char *string);
 
