@@ -13,38 +13,18 @@
 #include "uifw_priv.h"
 #include "android.h"
 
-struct AndroidLocal {
-	JNIEnv *env;
-	jobject ctx;
-};
-__thread struct AndroidLocal local = {0, 0};
-
 #pragma GCC visibility push(internal)
 
 jobject uiViewFromControl(void *c) {
 	return ((struct uiAndroidControl *)c)->o;
 }
 
-void ui_android_set_env_ctx(JNIEnv *env, jobject ctx) {
-	local.ctx = ctx;
-	local.env = env;
-	// TODO: Set LibUI.ctx
-}
-
 void *uiAndroidGetCtx(void) {
-	if (local.ctx == 0) {
-		__android_log_write(ANDROID_LOG_ERROR, "libui", "NULL ctx");
-		abort();
-	}
-	return local.ctx;
+	return get_jni_ctx();
 }
 
 void *uiAndroidGetEnv(void) {
-	if (local.env == NULL) {
-		__android_log_write(ANDROID_LOG_ERROR, "libui", "NULL env");
-		abort();
-	}
-	return local.env;
+	return get_jni_env();
 }
 
 static int check_exception(void) {
@@ -635,7 +615,7 @@ int uiAndroidClose(JNIEnv *env) {
 }
 
 int uiAndroidInit(JNIEnv *env, jobject context) {
-	ui_android_set_env_ctx(env, context);
+	set_jni_env_ctx(env, context);
 
 	jclass class = libui_class(env);
 	jfieldID ctx_f = (*env)->GetStaticFieldID(env, class, "ctx", "Landroid/content/Context;");

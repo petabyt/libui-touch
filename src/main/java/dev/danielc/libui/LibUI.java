@@ -8,6 +8,8 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -18,6 +20,7 @@ import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
@@ -75,6 +78,23 @@ public class LibUI {
         public native void onItemSelected(AdapterView<?> parent, View view, int position, long id);
         @Override
         public native void onNothingSelected(AdapterView<?> parent);
+    }
+
+    private static class MyCheckedListener implements CompoundButton.OnCheckedChangeListener {
+        byte[] struct;
+        @Override
+        public native void onCheckedChanged(CompoundButton buttonView, boolean isChecked);
+    }
+
+    private static class MyTextWatcher implements TextWatcher {
+        View view;
+        byte[] struct;
+        @Override
+        public native void beforeTextChanged(CharSequence s, int start, int count, int after);
+        @Override
+        public native void onTextChanged(CharSequence s, int start, int before, int count);
+        @Override
+        public native void afterTextChanged(Editable s);
     }
 
     private static class MyOnClickListener implements View.OnClickListener {

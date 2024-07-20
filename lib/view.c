@@ -27,6 +27,12 @@ jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, 
 	return linear_layout;
 }
 
+void view_set_checked(JNIEnv *env, jobject view, jboolean checked) {
+	jclass cpb = (*env)->FindClass(env, "android/widget/CompoundButton");
+	jmethodID set_checked_m = (*env)->GetMethodID(env, cpb, "setChecked", "(Z)V");
+	(*env)->CallVoidMethod(env, view, set_checked_m, checked);
+}
+
 jobject tabhost_new(JNIEnv *env, jobject ctx) {
 #if 0
 	LinearLayout layout = new LinearLayout(ctx);

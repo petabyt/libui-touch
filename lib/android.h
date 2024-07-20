@@ -3,6 +3,16 @@
 
 #include <jni.h>
 
+struct AndroidLocal {
+	JNIEnv *env;
+	jobject ctx;
+};
+struct AndroidLocal push_jni_env_ctx(JNIEnv *env, jobject ctx);
+void pop_jni_env_ctx(struct AndroidLocal l);
+void set_jni_env_ctx(JNIEnv *env, jobject ctx);
+JNIEnv *get_jni_env(void);
+jobject get_jni_ctx(void);
+
 // https://android.googlesource.com/platform/frameworks/base/+/2ca2c87/core/res/res/values/public.xml
 #define ANDROID_progressBarStyleHorizontal 0x01010078
 
@@ -33,6 +43,7 @@ jobject jni_get_display_metrics(JNIEnv *env, jobject ctx);
 jobject jni_get_main_looper(JNIEnv *env);
 jobject jni_get_handler(JNIEnv *env);
 jobject jni_activity_get_root_view(JNIEnv *env, jobject ctx);
+jobject jni_get_application_ctx(JNIEnv *env);
 
 /**
  * Get a file from the 'assets' directory of the app
@@ -55,10 +66,10 @@ void popupwindow_set_content(JNIEnv *env, jobject popup, jobject view);
 void popupwindow_open(JNIEnv *env, jobject ctx, jobject popup);
 
 /// Set/Get permanent settings
-jobject jni_get_pref_str(JNIEnv *env, jobject ctx, char *key);
-jint jni_get_pref_int(JNIEnv *env, jobject ctx, char *key);
-void jni_set_pref_str(JNIEnv *env, jobject ctx, char *key, char *str);
-void jni_set_pref_int(JNIEnv *env, jobject ctx, char *key, int x);
+jint jni_get_pref_int(JNIEnv *env, jobject ctx, const char *key, jint default_val);
+const char *jni_get_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *default_val);
+void jni_set_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *str);
+void jni_set_pref_int(JNIEnv *env, jobject ctx, const char *key, int x);
 /// Get allocated string from R.strings.*
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
 
@@ -66,6 +77,7 @@ jobject popup_new(JNIEnv *env, jobject ctx, int drawable_id);
 
 // view.c
 jobject view_get_context(JNIEnv *env, jobject view);
+void view_set_checked(JNIEnv *env, jobject view, jboolean checked);
 void view_set_text_size(JNIEnv *env, jobject obj, float size);
 jint view_get_res_id(JNIEnv *env, jobject ctx, const char *key, const char *name);
 jobject view_get_by_id(JNIEnv *env, jobject ctx, const char *id);
@@ -94,6 +106,8 @@ void ctx_set_content_view(JNIEnv *env, jobject ctx, jobject view);
 void view_add_native_click_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
 void jni_native_runnable(JNIEnv *env, jobject ctx, void *fn, int argc, void *arg1, void *arg2);
 void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
+void view_add_native_checked_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
+void view_add_native_input_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
 
 // Env/Context setter
 void ui_android_set_env_ctx(JNIEnv *env, jobject ctx);
