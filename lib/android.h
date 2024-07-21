@@ -7,6 +7,7 @@ struct AndroidLocal {
 	JNIEnv *env;
 	jobject ctx;
 };
+
 struct AndroidLocal push_jni_env_ctx(JNIEnv *env, jobject ctx);
 void pop_jni_env_ctx(struct AndroidLocal l);
 void set_jni_env_ctx(JNIEnv *env, jobject ctx);
@@ -72,6 +73,7 @@ void jni_set_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *str
 void jni_set_pref_int(JNIEnv *env, jobject ctx, const char *key, int x);
 /// Get allocated string from R.strings.*
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
+int jni_get_string_id(JNIEnv *env, jobject ctx, const char *id);
 
 jobject popup_new(JNIEnv *env, jobject ctx, int drawable_id);
 

@@ -321,6 +321,17 @@ const char *jni_get_string(JNIEnv *env, jobject ctx, const char *key) {
 	return c_string;
 }
 
+int jni_get_string_id(JNIEnv *env, jobject ctx, const char *key) {
+	(*env)->PushLocalFrame(env, 10);
+	jobject res = jni_get_resources(env, ctx);
+
+	int id = view_get_res_id(env, ctx, "string", key);
+	if (id == 0) abort();
+
+	(*env)->PopLocalFrame(env, NULL);
+	return id;
+}
+
 // Added in POSIX 2008, not C standard
 __attribute__((weak))
 char *stpcpy(char *dst, const char *src) {
