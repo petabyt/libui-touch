@@ -7,6 +7,8 @@
 
 #include "android.h"
 
+#pragma GCC visibility push(internal)
+
 jobject view_get_context(JNIEnv *env, jobject view) {
 	jclass view_c = (*env)->FindClass(env, "android/view/View");
 	jmethodID get_context_m = (*env)->GetMethodID(env, view_c, "getContext", "()Landroid/content/Context;");
@@ -527,3 +529,5 @@ public static View form(String name) {
         return popup;
     }
 #endif
+
+#pragma GCC visibility pop

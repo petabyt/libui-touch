@@ -6,6 +6,8 @@
 #include <android/log.h>
 #include "android.h"
 
+#pragma GCC visibility push(internal)
+
 jobject jni_get_display_metrics(JNIEnv *env, jobject ctx) {
 	jclass cls_activity = (*env)->FindClass(env, "android/app/Activity");
 	jclass cls_window_manager = (*env)->FindClass(env, "android/view/WindowManager");
@@ -338,3 +340,5 @@ char *stpcpy(char *dst, const char *src) {
 	const size_t len = strlen(src);
 	return (char *)memcpy (dst, src, len + 1) + len;
 }
+
+#pragma GCC visibility pop

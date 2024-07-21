@@ -8,6 +8,8 @@
 #include "android.h"
 #include "uifw_priv.h"
 
+#pragma GCC visibility push(internal)
+
 struct CallbackData {
 	uintptr_t fn_ptr;
 	int argc;
@@ -57,6 +59,7 @@ void view_add_native_click_listener(JNIEnv *env, jobject view, void *fn, int arg
 	(*env)->CallVoidMethod(env, view, set_click, listener);
 }
 
+
 void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2) {
 	struct CallbackData call_data;
 	call_data.argc = argc;
@@ -99,6 +102,7 @@ void view_add_native_checked_listener(JNIEnv *env, jobject view, void *fn, int a
 	(*env)->CallVoidMethod(env, view, set_click, listener);
 }
 
+__attribute__((visibility("hidden")))
 void view_add_native_input_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2) {
 	struct CallbackData call_data;
 	call_data.argc = argc;
@@ -147,6 +151,8 @@ void jni_native_runnable(JNIEnv *env, jobject ctx, void *fn, int argc, void *arg
 	jmethodID post_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, handler), "post", "(Ljava/lang/Runnable;)Z");
 	(*env)->CallBooleanMethod(env, handler, post_m, listener);
 }
+
+#pragma GCC visibility pop
 
 LIBUI(void, 00024MyTextWatcher_beforeTextChanged)(JNIEnv *env, jobject thiz, jobject s,
 													 jint start, jint count, jint after) {
