@@ -67,10 +67,10 @@ void popupwindow_set_content(JNIEnv *env, jobject popup, jobject view);
 void popupwindow_open(JNIEnv *env, jobject ctx, jobject popup);
 
 /// Set/Get permanent settings
-jint jni_get_pref_int(JNIEnv *env, jobject ctx, const char *key, jint default_val);
-const char *jni_get_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *default_val);
-void jni_set_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *str);
-void jni_set_pref_int(JNIEnv *env, jobject ctx, const char *key, int x);
+jint jni_get_pref_int(JNIEnv *env, const char *key, jint default_val);
+const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_val);
+void jni_set_pref_str(JNIEnv *env, const char *key, const char *str);
+void jni_set_pref_int(JNIEnv *env, const char *key, int x);
 /// Get allocated string from R.strings.*
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
 int jni_get_string_id(JNIEnv *env, jobject ctx, const char *id);

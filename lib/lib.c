@@ -214,8 +214,9 @@ jboolean jni_check_pref(JNIEnv *env, jobject ctx, const char *key) {
 	return value;
 }
 
-const char *jni_get_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *default_val) {
+const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_val) {
 	(*env)->PushLocalFrame(env, 10);
+	jobject ctx = jni_get_application_ctx(env);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jmethodID get_string_m = (*env)->GetMethodID(env, shared_pref_c, "getString", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
 	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
@@ -232,8 +233,9 @@ const char *jni_get_pref_str(JNIEnv *env, jobject ctx, const char *key, const ch
 	return valuestr;
 }
 
-jint jni_get_pref_int(JNIEnv *env, jobject ctx, const char *key, jint default_val) {
+jint jni_get_pref_int(JNIEnv *env, const char *key, jint default_val) {
 	(*env)->PushLocalFrame(env, 10);
+	jobject ctx = jni_get_application_ctx(env);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jmethodID get_int_m = (*env)->GetMethodID(env, shared_pref_c, "getInt", "(Ljava/lang/String;I)I");
 	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
@@ -261,8 +263,9 @@ jobject jni_get_pref_editor(JNIEnv *env, jobject ctx) {
 	return (*env)->CallObjectMethod(env, pref_o, edit_m);
 }
 
-void jni_set_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *str) {
+void jni_set_pref_str(JNIEnv *env, const char *key, const char *str) {
 	(*env)->PushLocalFrame(env, 10);
+	jobject ctx = jni_get_application_ctx(env);
 	jstring package_name_s = jni_get_package_name(env, ctx);
 	jobject editor_o = jni_get_pref_editor(env, ctx);
 
@@ -276,8 +279,9 @@ void jni_set_pref_str(JNIEnv *env, jobject ctx, const char *key, const char *str
 	(*env)->PopLocalFrame(env, NULL);
 }
 
-void jni_set_pref_int(JNIEnv *env, jobject ctx, const char *key, int x) {
+void jni_set_pref_int(JNIEnv *env, const char *key, int x) {
 	(*env)->PushLocalFrame(env, 10);
+	jobject ctx = jni_get_application_ctx(env);
 	jstring package_name_s = jni_get_package_name(env, ctx);
 	jobject editor_o = jni_get_pref_editor(env, ctx);
 
