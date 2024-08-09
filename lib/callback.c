@@ -35,6 +35,7 @@ static void function_callback(JNIEnv *env, jbyteArray arr) {
 	} else {
 		abort();
 	}
+	(*env)->ReleaseByteArrayElements(env, arr, (jbyte *)data, JNI_ABORT);
 }
 
 void view_add_native_click_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2) {
