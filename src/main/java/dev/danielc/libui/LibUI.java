@@ -116,4 +116,11 @@ public class LibUI {
         @Override
         public native void run();
     }
+
+    public static class DummyActivity extends Activity {
+        @Override
+        protected native void onCreate(Bundle savedInstanceState);
+        @Override
+        public native boolean onOptionsItemSelected(MenuItem item);
+    }
 }

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <jni.h>
 #include <android/log.h>
+#include <assert.h>
 #include "android.h"
 
 #pragma GCC visibility push(internal)
@@ -197,8 +198,9 @@ const char *jni_get_external_storage_path(JNIEnv *env) {
 	return (*env)->GetStringUTFChars(env, path, 0);
 }
 
-jboolean jni_check_pref(JNIEnv *env, jobject ctx, const char *key) {
+jboolean jni_check_pref(JNIEnv *env, const char *key) {
 	(*env)->PushLocalFrame(env, 10);
+	jobject ctx = jni_get_application_ctx(env);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
 	jmethodID contains_m = (*env)->GetMethodID(env, shared_pref_c, "contains", "(Ljava/lang/String;)Z");
 	jmethodID get_pref_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, ctx), "getSharedPreferences", "(Ljava/lang/String;I)Landroid/content/SharedPreferences;");
@@ -336,6 +338,37 @@ int jni_get_string_id(JNIEnv *env, jobject ctx, const char *key) {
 
 	(*env)->PopLocalFrame(env, NULL);
 	return id;
+}
+
+// TODO: Detect AppCompatActivity/Activity
+void jni_set_support_action_bar(JNIEnv *env, jobject ctx, int id) {
+	assert(id != 0);
+	jclass activity_class = (*env)->GetObjectClass(env, ctx);
+	jmethodID find_view_by_id_method = (*env)->GetMethodID(env, activity_class, "findViewById", "(I)Landroid/view/View;");
+	jobject toolbar = (*env)->CallObjectMethod(env, ctx, find_view_by_id_method, id);
+
+	jmethodID set_support_action_bar_method = (*env)->GetMethodID(env, activity_class, "setActionBar",
+																  "(Landroid/widget/Toolbar;)V");
+	(*env)->CallVoidMethod(env, ctx, set_support_action_bar_method, toolbar);
+}
+
+int jni_action_bar_set_home_icon(JNIEnv *env, jobject ctx, int drawable_id) {
+	assert(drawable_id != 0);
+	jclass activity_class = (*env)->GetObjectClass(env, ctx);
+
+	jmethodID get_support_action_bar_method = (*env)->GetMethodID(env, activity_class, "getActionBar", "()Landroid/app/ActionBar;");
+	jobject action_bar = (*env)->CallObjectMethod(env, ctx, get_support_action_bar_method);
+	assert(action_bar != NULL);
+
+	jclass action_bar_class = (*env)->GetObjectClass(env, action_bar);
+	jmethodID set_home_as_up_indicator_method = (*env)->GetMethodID(env, action_bar_class, "setHomeAsUpIndicator", "(I)V");
+	(*env)->CallVoidMethod(env, action_bar, set_home_as_up_indicator_method, drawable_id);
+
+	jmethodID set_display_home_as_up_enabled_method = (*env)->GetMethodID(env, action_bar_class, "setDisplayHomeAsUpEnabled", "(Z)V");
+	(*env)->CallVoidMethod(env, action_bar, set_display_home_as_up_enabled_method, JNI_TRUE);
+
+	jmethodID set_display_show_title_enabled_method = (*env)->GetMethodID(env, action_bar_class, "setDisplayShowTitleEnabled", "(Z)V");
+	(*env)->CallVoidMethod(env, action_bar, set_display_show_title_enabled_method, JNI_FALSE);
 }
 
 // Added in POSIX 2008, not C standard

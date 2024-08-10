@@ -71,6 +71,7 @@ jint jni_get_pref_int(JNIEnv *env, const char *key, jint default_val);
 const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_val);
 void jni_set_pref_str(JNIEnv *env, const char *key, const char *str);
 void jni_set_pref_int(JNIEnv *env, const char *key, int x);
+jboolean jni_check_pref(JNIEnv *env, const char *key);
 /// Get allocated string from R.strings.*
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
 int jni_get_string_id(JNIEnv *env, jobject ctx, const char *id);
@@ -113,5 +114,8 @@ void view_add_native_input_listener(JNIEnv *env, jobject view, void *fn, int arg
 
 // Env/Context setter
 void ui_android_set_env_ctx(JNIEnv *env, jobject ctx);
+
+void jni_set_support_action_bar(JNIEnv *env, jobject ctx, int id);
+int jni_action_bar_set_home_icon(JNIEnv *env, jobject ctx, int drawable_id);
 
 #endif

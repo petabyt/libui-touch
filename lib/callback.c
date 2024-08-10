@@ -223,6 +223,27 @@ LIBUI(void, 00024MyRunnable_run)(JNIEnv* env, jobject thiz) {
 LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, jbyteArray arr) {
 	function_callback(env, arr);
 }
+
+LIBUI(void, 00024DummyActivity_onCreate)(JNIEnv *env, jobject thiz, jobject saved_instance_state) {
+	jclass activity_class = (*env)->GetSuperclass(env, (*env)->GetObjectClass(env, thiz));
+	jmethodID on_create_method = (*env)->GetMethodID(env, activity_class, "onCreate", "(Landroid/os/Bundle;)V");
+	(*env)->CallVoidMethod(env, thiz, on_create_method, saved_instance_state);
+
+	jclass intent_class = (*env)->FindClass(env, "android/content/Intent");
+	jmethodID get_intent_method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, thiz), "getIntent", "()Landroid/content/Intent;");
+	jobject intent_obj = (*env)->CallObjectMethod(env, thiz, get_intent_method);
+
+	jmethodID get_byte_array_extra_method = (*env)->GetMethodID(env, intent_class, "getByteArrayExtra", "(Ljava/lang/String;)[B");
+	jbyteArray byte_array = (jbyteArray)(*env)->CallObjectMethod(env, intent_obj, get_byte_array_extra_method, (*env)->NewStringUTF(env, "struct"));
+
+	jbyte* handle = (*env)->GetByteArrayElements(env, byte_array, NULL);
+	jsize handle_length = (*env)->GetArrayLength(env, byte_array);
+}
+
+LIBUI(jboolean, 00024DummyActivity_onOptionsItemSelected)(JNIEnv *env, jobject thiz, jobject menuitem) {
+	return JNI_TRUE;
+}
+
 #if 0
 LIBUI(jobject, callObjectFunction)(JNIEnv *env, jobject thiz, jbyteArray arr, jobjectArray args) {
 	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);

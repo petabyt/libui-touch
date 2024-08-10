@@ -588,7 +588,6 @@ uiControl *uiExpandControl(const char *name) {
 }
 
 const char *uiGet(const char *name) {
-	JNIEnv *env = uiAndroidGetEnv();
 	return jni_get_string(uiAndroidGetEnv(), uiAndroidGetCtx(), name);
 }
 

@@ -1,38 +1,38 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <android/log.h>
 #include <jni.h>
+#include "android.h"
 
 // This will be put in a __emutls_t.* variable
 // It's up to the compiler to decide how to implement it
-struct JNILocal {
-	JNIEnv *env;
-	jobject ctx;
-};
-__thread struct JNILocal local = {0, 0};
+__thread struct AndroidLocal local = {0, 0};
 
+__attribute__((weak))
 void set_jni_env_ctx(JNIEnv *env, jobject ctx) {
-	plat_dbg("Setting env/ctx %d, %d: %d", local.env, local.ctx, gettid());
 	local.env = env;
 	local.ctx = ctx;
 }
 
-struct JNILocal push_jni_env_ctx(JNIEnv *env, jobject ctx) {
-	struct JNILocal l;
+__attribute__((weak))
+struct AndroidLocal push_jni_env_ctx(JNIEnv *env, jobject ctx) {
+	struct AndroidLocal l;
 	l.env = local.env;
 	l.ctx = local.ctx;
-	plat_dbg("env: %u, ctx: %u, tid: %d", local.env, local.ctx, gettid());
 	local.env = env;
 	local.ctx = ctx;
 	return l;
 }
 
-void pop_jni_env_ctx(struct JNILocal l) {
+__attribute__((weak))
+void pop_jni_env_ctx(struct AndroidLocal l) {
 	set_jni_env_ctx(l.env, l.ctx);
 }
 
+__attribute__((weak))
 JNIEnv *get_jni_env() {
 	if (local.env == NULL) {
-		plat_dbg("JNIEnv not set for this thread");
+		puts("JNIEnv not set for this thread");
 		abort();
 	}
 
@@ -41,7 +41,7 @@ JNIEnv *get_jni_env() {
 
 jobject get_jni_ctx() {
 	if (local.ctx == NULL) {
-		plat_dbg("ctx not set for this thread");
+		puts("ctx not set for this thread");
 		abort();
 	}
 
