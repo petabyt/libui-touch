@@ -183,7 +183,6 @@ LIBUI(void, 00024MyCheckedListener_onCheckedChanged)(JNIEnv* env, jobject thiz,
 	jfieldID field = (*env)->GetFieldID(env, (*env)->GetObjectClass(env, thiz), "struct", "[B");
 	jobject arr = (*env)->GetObjectField(env, thiz, field);
 	function_callback(env, arr);
-	//set_jni_env_ctx(env, ctx);
 	pop_jni_env_ctx(x);
 }
 

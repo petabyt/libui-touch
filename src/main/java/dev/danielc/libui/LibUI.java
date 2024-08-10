@@ -1,5 +1,6 @@
 package dev.danielc.libui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
@@ -118,6 +119,7 @@ public class LibUI {
     }
 
     public static class DummyActivity extends Activity {
+        @SuppressLint("MissingSuperCall")
         @Override
         protected native void onCreate(Bundle savedInstanceState);
         @Override

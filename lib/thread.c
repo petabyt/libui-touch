@@ -1,3 +1,4 @@
+// These functions can be overridden if needed.
 #include <stdio.h>
 #include <stdlib.h>
 #include <android/log.h>
