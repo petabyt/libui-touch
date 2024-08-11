@@ -92,8 +92,13 @@ void view_set_focusable(JNIEnv *env, jobject obj);
 char *view_get_text(JNIEnv *env, jobject view);
 void view_set_text(JNIEnv *env, jobject view, const char *text);
 jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y);
+void view_set_button_style(JNIEnv *env, jobject ctx, jobject button, jint bg_res);
+jobject view_new_button(JNIEnv *env, jobject ctx);
+jobject view_new_scroll(JNIEnv *env, jobject ctx);
+jobject view_new_space(JNIEnv *env, jobject ctx);
+jobject view_new_textview(JNIEnv *env, jobject ctx);
 
-jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
+	jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
 jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
 jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
 jobject tabhost_new(JNIEnv *env, jobject ctx);
@@ -115,7 +120,7 @@ void view_add_native_input_listener(JNIEnv *env, jobject view, void *fn, int arg
 // Env/Context setter
 void ui_android_set_env_ctx(JNIEnv *env, jobject ctx);
 
-void jni_set_support_action_bar(JNIEnv *env, jobject ctx, int id);
+void jni_set_action_bar(JNIEnv *env, jobject ctx, int id);
 int jni_action_bar_set_home_icon(JNIEnv *env, jobject ctx, int drawable_id);
 
 #endif

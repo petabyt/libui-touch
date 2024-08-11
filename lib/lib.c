@@ -341,7 +341,7 @@ int jni_get_string_id(JNIEnv *env, jobject ctx, const char *key) {
 }
 
 // TODO: Detect AppCompatActivity/Activity
-void jni_set_support_action_bar(JNIEnv *env, jobject ctx, int id) {
+void jni_set_action_bar(JNIEnv *env, jobject ctx, int id) {
 	assert(id != 0);
 	jclass activity_class = (*env)->GetObjectClass(env, ctx);
 	jmethodID find_view_by_id_method = (*env)->GetMethodID(env, activity_class, "findViewById", "(I)Landroid/view/View;");

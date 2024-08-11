@@ -33,8 +33,7 @@ import android.widget.Toast;
 import android.app.ActionBar;
 
 public class LibUI {
-    public static Context ctx = null; // obsolete??
-    public static ActionBar actionBar = null;
+    public static Context ctx = null;
 
     // uiWindow (popup) background drawable style resource
     public static int popupDrawableResource = 0;
@@ -42,10 +41,7 @@ public class LibUI {
     // Background drawable resource for buttons
     public static int buttonBackgroundResource = 0;
 
-    public static native void callFunction(byte[] struct); // deprecate
-    public static native void initThiz(Context ctx);
-
-    public class MyActivityLifecycle implements Application.ActivityLifecycleCallbacks {
+    public static class MyActivityLifecycle implements Application.ActivityLifecycleCallbacks {
         @Override
         public native void onActivityCreated(Activity activity, Bundle bundle);
         @Override
@@ -62,7 +58,7 @@ public class LibUI {
         public native void onActivityDestroyed(Activity activity);
     }
 
-    public class CustomAdapter extends BaseAdapter {
+    public static class CustomAdapter extends BaseAdapter {
         @Override
         public native int getCount();
         @Override

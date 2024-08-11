@@ -15,6 +15,44 @@ jobject view_get_context(JNIEnv *env, jobject view) {
 	return (*env)->CallObjectMethod(env, view, get_context_m);
 }
 
+jobject view_new_space(JNIEnv *env, jobject ctx) {
+	jclass class = (*env)->FindClass(env, "android/widget/Space");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	return (*env)->NewObject(env, class, constructor, ctx);
+}
+
+jobject view_new_scroll(JNIEnv *env, jobject ctx) {
+	jclass class = (*env)->FindClass(env, "android/widget/ScrollView");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	return (*env)->NewObject(env, class, constructor, ctx);
+}
+
+jobject view_new_button(JNIEnv *env, jobject ctx) {
+	jclass class = (*env)->FindClass(env, "android/widget/Button");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	return (*env)->NewObject(env, class, constructor, get_jni_ctx());
+}
+
+jobject view_new_textview(JNIEnv *env, jobject ctx) {
+	jclass class = (*env)->FindClass(env, "android/widget/TextView");
+	jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(Landroid/content/Context;)V");
+	return (*env)->NewObject(env, class, constructor, get_jni_ctx());
+}
+
+void view_set_button_style(JNIEnv *env, jobject ctx, jobject button, jint bg_res) {
+	jobject res = jni_get_resources(env, ctx);
+	jobject theme = jni_get_theme(env, ctx);
+
+	if (bg_res != 0) {
+		jmethodID get_drawable_m = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getDrawable", "(ILandroid/content/res/Resources$Theme;)Landroid/graphics/drawable/Drawable;");
+
+		jobject drawable = (*env)->CallObjectMethod(env, res, get_drawable_m, bg_res, theme);
+
+		jmethodID method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, button), "setBackground", "(Landroid/graphics/drawable/Drawable;)V");
+		(*env)->CallVoidMethod(env, button, method, drawable);
+	}
+}
+
 jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y) {
 	jclass linear_layout_class = (*env)->FindClass(env, "android/widget/LinearLayout");
 	jmethodID linear_layout_constructor = (*env)->GetMethodID(env, linear_layout_class, "<init>", "(Landroid/content/Context;)V");

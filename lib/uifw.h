@@ -85,18 +85,6 @@ uiControl *uiExpandControl(const char *name);
 int luaopen_libuilua(lua_State *L);
 #endif
 
-/**
- * Get jobject ctx based on the caller's thread info
- * @return
- */
-void *uiAndroidGetCtx();
-
-/**
- * Get JNIEnv based on the caller's thread info
- * @return
- */
-void *uiAndroidGetEnv();
-
 jobject uiViewFromControl(void *c);
 
 #endif
