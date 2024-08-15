@@ -33,11 +33,15 @@ enum AndroidViewVisibilities {
 	ANDROID_VIEW_GONE = 9,
 };
 
-jobject jni_get_package_name(JNIEnv *env, jobject context);
+/// @brief ctx.getPackageName()
+jstring jni_get_package_name(JNIEnv *env, jobject context);
+/// @brief ctx.getLayoutInflater()
 jobject jni_get_layout_inflater(JNIEnv *env, jobject context);
 jobject jni_get_resources(JNIEnv *env, jobject context);
 jobject jni_get_theme(JNIEnv *env, jobject context);
+/// @brief Concatenate 2 JNI strings
 jstring jni_concat_strings2(JNIEnv *env, jstring a, jstring b);
+/// @brief Concatenate 3 JNI strings
 jstring jni_concat_strings3(JNIEnv *env, jstring a, jstring b, jstring c);
 jobject jni_get_drawable(JNIEnv *env, jobject ctx, int resid);
 jobject jni_get_display_metrics(JNIEnv *env, jobject ctx);
@@ -72,15 +76,18 @@ const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_v
 void jni_set_pref_str(JNIEnv *env, const char *key, const char *str);
 void jni_set_pref_int(JNIEnv *env, const char *key, int x);
 jboolean jni_check_pref(JNIEnv *env, const char *key);
-/// Get allocated string from R.strings.*
+/// @brief Get malloc'd string from R.strings.
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
+/// @brief Get string resource ID from R.strings.
 int jni_get_string_id(JNIEnv *env, jobject ctx, const char *id);
 
 jobject popup_new(JNIEnv *env, jobject ctx, int drawable_id);
 
 // view.c
+/// @brief View.getContext()
 jobject view_get_context(JNIEnv *env, jobject view);
 void view_set_checked(JNIEnv *env, jobject view, jboolean checked);
+jboolean view_get_checked(JNIEnv *env, jobject view);
 void view_set_text_size(JNIEnv *env, jobject obj, float size);
 jint view_get_res_id(JNIEnv *env, jobject ctx, const char *key, const char *name);
 jobject view_get_by_id(JNIEnv *env, jobject ctx, const char *id);
@@ -98,10 +105,10 @@ jobject view_new_scroll(JNIEnv *env, jobject ctx);
 jobject view_new_space(JNIEnv *env, jobject ctx);
 jobject view_new_textview(JNIEnv *env, jobject ctx);
 
-	jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
+jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
 jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
 jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
-jobject tabhost_new(JNIEnv *env, jobject ctx);
+jobject view_new_tabhost(JNIEnv *env, jobject ctx);
 void view_tabhost_add(JNIEnv *env, const char *name, jobject parent, jobject child);
 void viewgroup_addview(JNIEnv *env, jobject parent, jobject child);
 void jni_toast(JNIEnv *env, jobject ctx, const char *string);
@@ -117,8 +124,11 @@ void view_add_native_select_listener(JNIEnv *env, jobject view, void *fn, int ar
 void view_add_native_checked_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
 void view_add_native_input_listener(JNIEnv *env, jobject view, void *fn, int argc, void *arg1, void *arg2);
 
+typedef int activity_callback(JNIEnv *env, jobject ctx);
+int jni_start_native_activity(JNIEnv *env, jobject from_ctx, activity_callback *oncreate, activity_callback *ondestroy);
+
 // Env/Context setter
-void ui_android_set_env_ctx(JNIEnv *env, jobject ctx);
+// unused void ui_android_set_env_ctx(JNIEnv *env, jobject ctx);
 
 void jni_set_action_bar(JNIEnv *env, jobject ctx, int id);
 int jni_action_bar_set_home_icon(JNIEnv *env, jobject ctx, int drawable_id);

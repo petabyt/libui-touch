@@ -4,33 +4,18 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
-import android.content.res.Resources;
-import android.graphics.Typeface;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.DisplayMetrics;
-import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.LinearLayout.LayoutParams;
-import android.widget.PopupWindow;
 import android.widget.TabHost;
-import android.widget.TabWidget;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.app.ActionBar;
+
+import java.util.List;
 
 public class LibUI {
     public static Context ctx = null;
@@ -115,10 +100,14 @@ public class LibUI {
     }
 
     public static class DummyActivity extends Activity {
+        byte[] struct;
         @SuppressLint("MissingSuperCall")
         @Override
         protected native void onCreate(Bundle savedInstanceState);
         @Override
         public native boolean onOptionsItemSelected(MenuItem item);
+        @Override
+        @SuppressLint("MissingSuperCall")
+        public native void onDestroy();
     }
 }

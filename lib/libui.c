@@ -338,7 +338,7 @@ static int jni_does_class_exist(JNIEnv *env, const char *name) {
 uiTab *uiNewTab(void) {
 	JNIEnv *env = get_jni_env();
 	struct uiAndroidControl *t = new_view_control(uiTabSignature);
-	t->o = tabhost_new(env, get_jni_ctx());
+	t->o = view_new_tabhost(env, get_jni_ctx());
 	return (uiTab *)t;
 }
 
@@ -548,6 +548,18 @@ const char *uiGet(const char *name) {
 uintptr_t uiControlHandle(uiControl *c) {
 	return (uintptr_t)((uiAndroidControl *)c)->o;
 }
+
+#if 0
+uiScreen *uiNewScreen(const char *title, uiScreenInfo *info);
+void uiScreenSetOnCreate();
+void uiScreenSetOnClosed();
+
+uiScreen *uiStartScreen(uiScreen *screen);
+
+// For desktop only
+void uiWindowSetScreen(uiScreen *screen);
+
+#endif
 
 void uiControlSetAttr(uiControl *c, const char *key, const char *value) {
 	JNIEnv *env = get_jni_env();

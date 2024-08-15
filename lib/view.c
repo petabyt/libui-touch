@@ -73,7 +73,13 @@ void view_set_checked(JNIEnv *env, jobject view, jboolean checked) {
 	(*env)->CallVoidMethod(env, view, set_checked_m, checked);
 }
 
-jobject tabhost_new(JNIEnv *env, jobject ctx) {
+jboolean view_get_checked(JNIEnv *env, jobject view) {
+	jclass cpb = (*env)->FindClass(env, "android/widget/CompoundButton");
+	jmethodID set_checked_m = (*env)->GetMethodID(env, cpb, "isChecked", "()Z");
+	return (*env)->CallBooleanMethod(env, view, set_checked_m);
+}
+
+jobject view_new_tabhost(JNIEnv *env, jobject ctx) {
 #if 0
 	LinearLayout layout = new LinearLayout(ctx);
 	layout.setOrientation(LinearLayout.VERTICAL);

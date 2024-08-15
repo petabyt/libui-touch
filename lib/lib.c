@@ -56,7 +56,7 @@ jobject jni_get_handler(JNIEnv *env) {
 	return handler;
 }
 
-jobject jni_get_package_name(JNIEnv *env, jobject context) {
+jstring jni_get_package_name(JNIEnv *env, jobject context) {
 	jmethodID get_package_name = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getPackageName", "()Ljava/lang/String;");
 	return (*env)->CallObjectMethod(env, context, get_package_name);
 }
