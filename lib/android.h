@@ -66,30 +66,41 @@ void *jni_get_assets_file(JNIEnv *env, jobject ctx, const char *filename, int *l
  * @param filename
  * @return
  */
+// ???
+
+/// Creates a new PopupWindow of full-screen height (?)
 jobject popupwindow_new(JNIEnv *env, jobject ctx, int drawable_id);
+/// Sets the content view of the PopupWindow
 void popupwindow_set_content(JNIEnv *env, jobject popup, jobject view);
+/// Make the PopupWindow visible.
 void popupwindow_open(JNIEnv *env, jobject ctx, jobject popup);
 
-/// Set/Get permanent settings
+/// Get jint pref
 jint jni_get_pref_int(JNIEnv *env, const char *key, jint default_val);
+/// Get pref as cstring TODO: Leaks
 const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_val);
+/// Set cstring value of pref
 void jni_set_pref_str(JNIEnv *env, const char *key, const char *str);
+/// Set jint value of pref
 void jni_set_pref_int(JNIEnv *env, const char *key, int x);
+/// Check if pref exists. Returns 1 if exists.
 jboolean jni_check_pref(JNIEnv *env, const char *key);
 /// @brief Get malloc'd string from R.strings.
 const char *jni_get_string(JNIEnv *env, jobject ctx, const char *id);
 /// @brief Get string resource ID from R.strings.
 int jni_get_string_id(JNIEnv *env, jobject ctx, const char *id);
 
-jobject popup_new(JNIEnv *env, jobject ctx, int drawable_id);
-
-// view.c
-/// @brief View.getContext()
+/// View.getContext()
 jobject view_get_context(JNIEnv *env, jobject view);
+/// View.setChecked()
 void view_set_checked(JNIEnv *env, jobject view, jboolean checked);
+/// View.isChecked()
 jboolean view_get_checked(JNIEnv *env, jobject view);
+/// View.setTextSize()
 void view_set_text_size(JNIEnv *env, jobject obj, float size);
+/// Get resource ID from key/name. For example. key=id name=hello == R.id.hello
 jint view_get_res_id(JNIEnv *env, jobject ctx, const char *key, const char *name);
+/// (View)findViewById(R.id.<id>)
 jobject view_get_by_id(JNIEnv *env, jobject ctx, const char *id);
 void view_set_visibility(JNIEnv *env, jobject view, int v);
 void view_set_dimensions(JNIEnv *env, jobject view, int w, int h);
@@ -100,20 +111,28 @@ char *view_get_text(JNIEnv *env, jobject view);
 void view_set_text(JNIEnv *env, jobject view, const char *text);
 jobject view_new_linearlayout(JNIEnv *env, jobject ctx, int is_vertical, int x, int y);
 void view_set_button_style(JNIEnv *env, jobject ctx, jobject button, jint bg_res);
+/// Create blank button
 jobject view_new_button(JNIEnv *env, jobject ctx);
+/// Create a ScrollView
 jobject view_new_scroll(JNIEnv *env, jobject ctx);
 jobject view_new_space(JNIEnv *env, jobject ctx);
 jobject view_new_textview(JNIEnv *env, jobject ctx);
-
+/// Get the adapter of a combobox. Will create an ArrayAdapter if it's not set. Returns the adapter.
 jobject combobox_get_adapter(JNIEnv *env, jobject ctx, jobject view);
+/// Get resource ID of a R.drawable.<name>
 jobject get_drawable_id(JNIEnv *env, jobject ctx, const char *name);
+/// Inflate a view/viewgroup from name
 jobject view_expand(JNIEnv *env, jobject ctx, const char *name);
+/// Create an old (deprecated) TabHost
 jobject view_new_tabhost(JNIEnv *env, jobject ctx);
-void view_tabhost_add(JNIEnv *env, const char *name, jobject parent, jobject child);
-void viewgroup_addview(JNIEnv *env, jobject parent, jobject child);
+/// Add a tab to the TabHost - string title only.
+void view_tabhost_add(JNIEnv *env, const char *name, jobject tabhost, jobject child);
+/// Append a view to a ViewGroup
+void viewgroup_addview(JNIEnv *env, jobject group, jobject child);
 void jni_toast(JNIEnv *env, jobject ctx, const char *string);
-
+/// setContentView(R.layout.<name>)
 void ctx_set_content_layout(JNIEnv *env, jobject ctx, const char *name);
+/// setContentView(view)
 void ctx_set_content_view(JNIEnv *env, jobject ctx, jobject view);
 
 // callback.c

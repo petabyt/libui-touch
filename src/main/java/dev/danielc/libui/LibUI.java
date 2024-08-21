@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MenuItem;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -44,6 +45,7 @@ public class LibUI {
     }
 
     public static class CustomAdapter extends BaseAdapter {
+        byte[] struct;
         @Override
         public native int getCount();
         @Override
@@ -94,9 +96,19 @@ public class LibUI {
 
     private static class MyRunnable implements Runnable {
         byte[] struct;
-        Context ctx;
+        Context ctx; // wtf leak? WeakReference?
         @Override
         public native void run();
+    }
+
+    private static class MySurface implements SurfaceHolder.Callback {
+        byte[] struct;
+        @Override
+        public native void surfaceCreated(SurfaceHolder surfaceHolder);
+        @Override
+        public native void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2);
+        @Override
+        public native void surfaceDestroyed(SurfaceHolder surfaceHolder);
     }
 
     public static class DummyActivity extends Activity {

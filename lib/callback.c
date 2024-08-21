@@ -309,6 +309,28 @@ LIBUI(void, 00024DummyActivity_onDestroy)(JNIEnv *env, jobject thiz) {
 	}
 }
 
+typedef jobject adapter_get_view(JNIEnv *env, jobject thiz, jint i, jobject view, jobject group);
+struct AndroidCustomAdapter {
+	adapter_get_view *get_view;
+	pthread_mutex_t *mutex;
+};
+
+LIBUI(jint, 00024CustomAdapter_getCount)(JNIEnv *env, jobject thiz) {
+	// TODO: implement getCount()
+}
+
+LIBUI(jobject, 00024CustomAdapter_getItem)(JNIEnv *env, jobject thiz, jint i) {
+	// TODO: implement getItem()
+}
+
+LIBUI(jint, 00024CustomAdapter_getItemId)(JNIEnv *env, jobject thiz, jint i) {
+	// TODO: implement getItemId()
+}
+
+LIBUI(jobject, 00024CustomAdapter_getView)(JNIEnv *env, jobject thiz, jint i, jobject view, jobject view_group) {
+	// TODO: implement getView()
+}
+
 #if 0
 LIBUI(jobject, callObjectFunction)(JNIEnv *env, jobject thiz, jbyteArray arr, jobjectArray args) {
 	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
@@ -326,3 +348,7 @@ LIBUI(jobject, callObjectFunction)(JNIEnv *env, jobject thiz, jbyteArray arr, jo
 	return ptr_f(data->arg1, data->arg2);
 }
 #endif
+
+
+
+

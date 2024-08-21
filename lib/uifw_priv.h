@@ -7,19 +7,6 @@
 #define LIBUI(ret, name) JNIEXPORT ret JNICALL Java_dev_danielc_libui_LibUI_##name
 #endif
 
-struct UILibAndroidEnv {
-	jclass class;
-
-	jmethodID form_m;
-	jmethodID tab_layout_m;
-
-	jmethodID form_add_m;
-	jmethodID add_tab_m;
-	jmethodID add_runnable_m;
-};
-
-extern struct UILibAndroidEnv libui;
-
 #define uiAreaSignature 0x41726561
 #define uiBoxSignature 0x426F784C
 #define uiButtonSignature 0x42746F6E
