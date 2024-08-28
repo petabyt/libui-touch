@@ -284,9 +284,9 @@ uiButton *uiNewButton(const char *text) {
 
 	jfieldID button_bg_f = (*env)->GetStaticFieldID(env, libui_class(env), "buttonBackgroundResource", "I");
 	jint button_bg = (*env)->GetStaticIntField(env, libui_class(env), button_bg_f);
-	assert(button_bg != 0);
-
-	view_set_button_style(env, get_jni_ctx(), obj, button_bg);
+	if (button_bg != 0) {
+		view_set_button_style(env, get_jni_ctx(), obj, button_bg);
+	}
 
 	obj = (*env)->PopLocalFrame(env, obj);
 	b->o = obj;
@@ -354,7 +354,7 @@ uiMultilineEntry *uiNewMultilineEntry(void) {
 	return (uiMultilineEntry *)c;
 }
 
-uiEntry *uiNewEntry() {
+uiEntry *uiNewEntry(void) {
 	struct uiAndroidControl *c = new_view_control(uiEntrySignature);
 
 	JNIEnv *env = get_jni_env();
@@ -368,7 +368,7 @@ uiEntry *uiNewEntry() {
 	return (uiEntry *)c;
 }
 
-uiProgressBar *uiNewProgressBar() {
+uiProgressBar *uiNewProgressBar(void) {
 	JNIEnv *env = get_jni_env();
 	struct uiAndroidControl *c = new_view_control(uiProgressBarSignature);
 	jclass class = (*env)->FindClass(env, "android/widget/ProgressBar");
@@ -416,7 +416,7 @@ char *uiGroupTitle(uiGroup *g) {
 void uiGroupSetTitle(uiGroup *g, const char *title) {}
 int uiGroupMargined(uiGroup *g) {return 0;}
 
-uiForm *uiNewForm() {
+uiForm *uiNewForm(void) {
 	return (uiForm *)uiNewVerticalBox();
 }
 
