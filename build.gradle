@@ -31,22 +31,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    sourceSets {
-        main {
-            java {
-                if (!rootProject.hasProperty("USE_LITE")) {
-                    srcDirs 'java'
-                } else {
-                    srcDirs 'lite'
-                }
-            }
+}
+
+if (rootProject.ext.has("lite")) {
+    tasks.withType(JavaCompile).configureEach {
+        doFirst {
+            source = source.filter { file -> !file.name.endsWith("AndroidX.java") }
         }
     }
 }
 
 dependencies {
     if (!rootProject.ext.has("lite")) {
-        print(rootProject)
         dependencies.add('implementation', 'androidx.appcompat:appcompat:1.4.1')
         dependencies.add('implementation', 'com.google.android.material:material:1.5.0')
         dependencies.add('implementation', 'androidx.constraintlayout:constraintlayout:2.1.3')

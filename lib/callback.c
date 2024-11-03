@@ -17,6 +17,11 @@ struct CallbackData {
 	uintptr_t arg2;
 };
 
+struct ActivityData {
+	activity_callback *oncreate;
+	activity_callback *ondestroy;
+};
+
 static void function_callback(JNIEnv *env, jbyteArray arr) {
 	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
 	if (data->fn_ptr == 0x0) abort();
@@ -153,6 +158,33 @@ void jni_native_runnable(JNIEnv *env, jobject ctx, void *fn, int argc, void *arg
 	(*env)->CallBooleanMethod(env, handler, post_m, listener);
 }
 
+int jni_start_native_activity(JNIEnv *env, jobject from_ctx, activity_callback *oncreate, activity_callback *ondestroy) {
+	(*env)->PushLocalFrame(env, 10);
+
+	jclass intent_cls = (*env)->FindClass(env, "android/content/Intent");
+	jmethodID intent_ctor = (*env)->GetMethodID(env, intent_cls, "<init>", "(Landroid/content/Context;Ljava/lang/Class;)V");
+	jclass dummy_activity_cls = (*env)->FindClass(env, "dev/danielc/libui/LibUI$DummyActivity");
+
+	jobject intent = (*env)->NewObject(env, intent_cls, intent_ctor, from_ctx, dummy_activity_cls);
+
+	jbyteArray x = (*env)->NewByteArray(env, sizeof(struct ActivityData));
+	struct ActivityData a = {
+		.oncreate = oncreate,
+		.ondestroy = ondestroy,
+	};
+	(*env)->SetByteArrayRegion(env, x, 0, sizeof(a), (const jbyte *)&a);
+
+	jstring key = (*env)->NewStringUTF(env, "struct");
+	jmethodID put_extra = (*env)->GetMethodID(env, intent_cls, "putExtra", "(Ljava/lang/String;[B)Landroid/content/Intent;");
+	(*env)->CallObjectMethod(env, intent, put_extra, key, x);
+
+	jclass activity_cls = (*env)->FindClass(env, "android/app/Activity");
+	jmethodID start_activity = (*env)->GetMethodID(env, activity_cls, "startActivity", "(Landroid/content/Intent;)V");
+	(*env)->CallVoidMethod(env, from_ctx, start_activity, intent);
+
+	(*env)->PopLocalFrame(env, NULL);
+}
+
 #pragma GCC visibility pop
 
 LIBUI(void, 00024MyTextWatcher_beforeTextChanged)(JNIEnv *env, jobject thiz, jobject s,
@@ -224,45 +256,73 @@ LIBUI(void, callFunction)(JNIEnv *env, jobject thiz, jbyteArray arr) {
 }
 
 LIBUI(void, 00024DummyActivity_onCreate)(JNIEnv *env, jobject thiz, jobject saved_instance_state) {
+	struct AndroidLocal x = push_jni_env_ctx(env, thiz);
 	jclass thiz_c = (*env)->GetObjectClass(env, thiz);
 	jclass activity_class = (*env)->GetSuperclass(env, thiz_c);
 	jmethodID on_create_method = (*env)->GetMethodID(env, activity_class, "onCreate", "(Landroid/os/Bundle;)V");
 	(*env)->CallNonvirtualVoidMethod(env, thiz, activity_class, on_create_method, saved_instance_state);
 
+	// Get bytearray intent data
 	jclass intent_class = (*env)->FindClass(env, "android/content/Intent");
 	jmethodID get_intent_method = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, thiz), "getIntent", "()Landroid/content/Intent;");
 	jobject intent_obj = (*env)->CallObjectMethod(env, thiz, get_intent_method);
 
-
 	jmethodID get_byte_array_extra_method = (*env)->GetMethodID(env, intent_class, "getByteArrayExtra", "(Ljava/lang/String;)[B");
 	jbyteArray byte_array = (jbyteArray)(*env)->CallObjectMethod(env, intent_obj, get_byte_array_extra_method, (*env)->NewStringUTF(env, "struct"));
 
+	jfieldID struct_id = (*env)->GetFieldID(env, thiz_c, "struct", "[B");
 	if (byte_array == NULL) {
-		return;
+		(*env)->SetObjectField(env, thiz, struct_id, NULL);
+	} else {
+		(*env)->SetObjectField(env, thiz, struct_id, byte_array);
+
+		jbyte *handle = (*env)->GetByteArrayElements(env, byte_array, NULL);
+		struct ActivityData *a = (struct ActivityData *)handle;
+
+		a->oncreate(env, thiz);
+
+		(*env)->ReleaseByteArrayElements(env, byte_array, handle, 0);
 	}
 
-	jbyte *handle = (*env)->GetByteArrayElements(env, byte_array, NULL);
-	jsize handle_length = (*env)->GetArrayLength(env, byte_array);
+	pop_jni_env_ctx(x);
 }
 
 LIBUI(jboolean, 00024DummyActivity_onOptionsItemSelected)(JNIEnv *env, jobject thiz, jobject menuitem) {
 	return JNI_TRUE;
 }
 
-#if 0
-LIBUI(jobject, callObjectFunction)(JNIEnv *env, jobject thiz, jbyteArray arr, jobjectArray args) {
-	struct CallbackData *data = (struct CallbackData *)(*env)->GetByteArrayElements(env, arr, 0);
+LIBUI(void, 00024DummyActivity_onDestroy)(JNIEnv *env, jobject thiz) {
+	jclass thiz_c = (*env)->GetObjectClass(env, thiz);
+	jclass activity_class = (*env)->GetSuperclass(env, thiz_c);
+	jmethodID on_create_method = (*env)->GetMethodID(env, activity_class, "onDestroy", "()V");
+	(*env)->CallNonvirtualVoidMethod(env, thiz, activity_class, on_create_method);
 
-	if (data->fn_ptr == 0x0) abort();
+	jfieldID struct_id = (*env)->GetFieldID(env, thiz_c, "struct", "[B");
+	if (struct_id != NULL) {
+		jobject byte_array = (*env)->GetObjectField(env, thiz, struct_id);
+		jbyte *handle = (*env)->GetByteArrayElements(env, byte_array, NULL);
+		struct ActivityData *a = (struct ActivityData *) handle;
 
-	if ((*env)->GetArrayLength(env, args) >= 1) {
-		data->arg1 = (uintptr_t)(*env)->GetObjectArrayElement(env, args, 0);
+		a->ondestroy(env, thiz);
+
+		(*env)->ReleaseByteArrayElements(env, byte_array, handle, 0);
 	}
-	if ((*env)->GetArrayLength(env, args) >= 2) {
-		data->arg2 = (uintptr_t)(*env)->GetObjectArrayElement(env, args, 1);
-	}
-
-	jobject (*ptr_f)(uintptr_t, uintptr_t) = (void *)data->fn_ptr;
-	return ptr_f(data->arg1, data->arg2);
 }
-#endif
+
+typedef jobject adapter_get_view(JNIEnv *env, jobject thiz, jint i, jobject view, jobject group);
+struct AndroidCustomAdapter {
+	adapter_get_view *get_view;
+	pthread_mutex_t *mutex;
+};
+LIBUI(jint, 00024CustomAdapter_getCount)(JNIEnv *env, jobject thiz) {
+	// TODO: implement getCount()
+}
+LIBUI(jobject, 00024CustomAdapter_getItem)(JNIEnv *env, jobject thiz, jint i) {
+	// TODO: implement getItem()
+}
+LIBUI(jint, 00024CustomAdapter_getItemId)(JNIEnv *env, jobject thiz, jint i) {
+	// TODO: implement getItemId()
+}
+LIBUI(jobject, 00024CustomAdapter_getView)(JNIEnv *env, jobject thiz, jint i, jobject view, jobject view_group) {
+	// TODO: implement getView()
+}

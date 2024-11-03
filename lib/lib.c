@@ -56,7 +56,7 @@ jobject jni_get_handler(JNIEnv *env) {
 	return handler;
 }
 
-jobject jni_get_package_name(JNIEnv *env, jobject context) {
+jstring jni_get_package_name(JNIEnv *env, jobject context) {
 	jmethodID get_package_name = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), "getPackageName", "()Ljava/lang/String;");
 	return (*env)->CallObjectMethod(env, context, get_package_name);
 }
@@ -216,7 +216,7 @@ jboolean jni_check_pref(JNIEnv *env, const char *key) {
 	return value;
 }
 
-const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_val) {
+char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_val) {
 	(*env)->PushLocalFrame(env, 10);
 	jobject ctx = jni_get_application_ctx(env);
 	jclass shared_pref_c = (*env)->FindClass(env, "android/content/SharedPreferences");
@@ -230,8 +230,9 @@ const char *jni_get_pref_str(JNIEnv *env, const char *key, const char *default_v
 	jstring path = jni_concat_strings3(env, package_name_s, (*env)->NewStringUTF(env, "."), (*env)->NewStringUTF(env, key));
 	jstring value = (*env)->CallObjectMethod(env, pref_o, get_string_m, path, (*env)->NewStringUTF(env, default_val));
 
-	value = (*env)->PopLocalFrame(env, value);
-	const char *valuestr = (*env)->GetStringUTFChars(env, value, 0);
+	char *valuestr = strdup((*env)->GetStringUTFChars(env, value, 0));
+
+	(*env)->PopLocalFrame(env, NULL);
 	return valuestr;
 }
 
@@ -307,12 +308,12 @@ jobject jni_get_application_ctx(JNIEnv *env) {
 	return context;
 }
 
-const char *jni_get_string(JNIEnv *env, jobject ctx, const char *key) {
+char *jni_get_string(JNIEnv *env, jobject ctx, const char *key) {
 	(*env)->PushLocalFrame(env, 10);
 	jobject res = jni_get_resources(env, ctx);
 
 	int id = view_get_res_id(env, ctx, "string", key);
-	if (id == 0) return (const char *)"NULL";
+	if (id == 0) return (char *)"NULL";
 
 	jmethodID get_string = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, res), "getString", "(I)Ljava/lang/String;");
 
@@ -320,10 +321,9 @@ const char *jni_get_string(JNIEnv *env, jobject ctx, const char *key) {
 		env, res, get_string, id
 	);
 
-	const char *c_string = (*env)->GetStringUTFChars(env, val, 0);
+	char *c_string = strdup((*env)->GetStringUTFChars(env, val, 0));
 
-	// Memory will be leaked
-	// env->ReleaseStringUTFChars(str, utf_string);
+	//(*env)->ReleaseStringUTFChars(env, val, c_string);
 
 	(*env)->PopLocalFrame(env, NULL);
 	return c_string;

@@ -284,9 +284,9 @@ uiButton *uiNewButton(const char *text) {
 
 	jfieldID button_bg_f = (*env)->GetStaticFieldID(env, libui_class(env), "buttonBackgroundResource", "I");
 	jint button_bg = (*env)->GetStaticIntField(env, libui_class(env), button_bg_f);
-	assert(button_bg != 0);
-
-	view_set_button_style(env, get_jni_ctx(), obj, button_bg);
+	if (button_bg != 0) {
+		view_set_button_style(env, get_jni_ctx(), obj, button_bg);
+	}
 
 	obj = (*env)->PopLocalFrame(env, obj);
 	b->o = obj;
@@ -313,11 +313,11 @@ uiLabel *uiNewLabel(const char *text) {
 
 char *uiLabelText(uiLabel *l) {return "NULL";}
 
-uiBox *uiNewVerticalBox() {
+uiBox *uiNewVerticalBox(void) {
 	return new_uibox(1);
 }
 
-uiBox *uiNewHorizontalBox() {
+uiBox *uiNewHorizontalBox(void) {
 	return new_uibox(0);
 }
 
@@ -338,7 +338,7 @@ static int jni_does_class_exist(JNIEnv *env, const char *name) {
 uiTab *uiNewTab(void) {
 	JNIEnv *env = get_jni_env();
 	struct uiAndroidControl *t = new_view_control(uiTabSignature);
-	t->o = tabhost_new(env, get_jni_ctx());
+	t->o = view_new_tabhost(env, get_jni_ctx());
 	return (uiTab *)t;
 }
 
@@ -548,6 +548,18 @@ const char *uiGet(const char *name) {
 uintptr_t uiControlHandle(uiControl *c) {
 	return (uintptr_t)((uiAndroidControl *)c)->o;
 }
+
+#if 0
+uiScreen *uiNewScreen(const char *title, uiScreenInfo *info);
+void uiScreenSetOnCreate();
+void uiScreenSetOnClosed();
+
+uiScreen *uiStartScreen(uiScreen *screen);
+
+// For desktop only
+void uiWindowSetScreen(uiScreen *screen);
+
+#endif
 
 void uiControlSetAttr(uiControl *c, const char *key, const char *value) {
 	JNIEnv *env = get_jni_env();
